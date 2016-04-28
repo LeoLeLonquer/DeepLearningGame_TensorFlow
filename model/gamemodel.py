@@ -94,9 +94,39 @@ class GameModel(Model):
 				debug("nb pieces: %d" % len(situation.player_pieces))
 
 				situation.check()
-				# RANDOM
+				
+				chunks = the_situation.split(8)
+				
+				## Define pieces in chunks
+				for i in range(len(chunks)):
+					chunk = chunks[i]
+					print chunk
+					print len(chunk)
+					for q in range(len(chunk)):
+						for r in range(len(chunk[q])):
+							if chunk[q][r].visible == False:
+								chunk[q][r] = 0
+							else:
+								if chunk[q][r].content == None:
+									if chunk[q][r].terrain == situation.GROUND:
+										chunk[q][r] = 1
+									else:
+										chunk[q][r] = 2
+								else:
+									if isinstance(chunk[q][r].content, situation.City):
+										chunk[q][r] = 3
+									elif isinstance(chunk[q][r].content, situation.OwnedCity):
+										chunk[q][r] = 4 + chunk[q][r].content.owner # 4 et 5 !!!
+									else:
+										chunk[q][r] = 6 + chunk[q][r].content.piece_type + chunk[q][r].content.owner * len(the_situation.pieces_types)
+										
+				# Define cities production
+				
 				for city_id in situation.player_cities:
 					#think.choose_relevant_random_production(situation, communication, city_id)
+				
+				# Define pieces action
+				
 				piece_ids = situation.player_pieces.keys()
 				for piece_id in piece_ids:
 					piece = situation.player_pieces[piece_id]
@@ -107,10 +137,14 @@ class GameModel(Model):
 					if len(destinations) > 0:
 						#destination = random.choice(destinations)
 						#communication.action("moves %d %d %d" % (piece_id, destination[0], destination[1]))
+						
+				# Show situation 
 				if step % 10 == 0:
 					situation.show()
-				if step != 0 and step % 10000 == 0:
+				# Save checkpoint each 1000 steps
+				if step != 0 and step % 1000 == 0:
 					self.save(checkpoint_dir, step)
-				if step % 50 == 1:
+				# Show current progress
+				if step % 1000 == 1:
 					print("Epoch: [%2d] time: %4.4f, loss: %.8f" % (step, time.time() - start_time, cost))
 				communication.end_turn()
