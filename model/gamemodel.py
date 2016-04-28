@@ -1,0 +1,116 @@
+import random
+import os
+import sys
+import socket
+import select
+import time
+
+import algos
+import parser
+import communication
+import situation
+import tools
+import think
+
+import tensorflow as tf
+
+from .base import Model
+from utils import conv2d, max_pool_2x2
+
+debug = tools.debug
+
+class GameModel(Model):
+	"""Deep Game Network."""
+	def __init__(self, sess,server_name, server_port):
+		self.sess = sess
+		self.build_model()
+		self.init_server(server_name,server_port)
+		
+	def init_server():
+		server_name = server_name
+		server_port = int(server_port)
+
+		# Connect to the server.
+		server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+		try:
+			server.connect((server_name, server_port))
+		except:
+			print "Unable to connect"
+			sys.exit(1)
+
+		server_fd = server.makefile()
+
+		situation = situation.Situation()
+		parser = parser.Parser(situation)
+		communication = communication.Communication(parser, server, server_fd)
+
+	def build_model(self):
+		# network weights
+		W_conv1 = tf.Variable(tf.truncated_normal([8, 8, 4, 32], stddev = 0.01)) #valeurs bidons
+		b_conv1 = tf.Variable(tf.constant(0.01, shape = [32]))
+
+		# input layer
+		self.input_layer = tf.placeholder("float", [None, 80, 80, 4]) #valeurs bidons
+
+		# hidden layers
+		self.h_fc1 = tf.nn.relu(tf.matmul(h_conv3_flat, W_fc1) + b_fc1)
+		
+		# readout layer
+		self.readout = tf.matmul(h_fc1, W_fc2) + b_fc2
+
+	def play(self, learning_rate=0.001,
+            checkpoint_dir="checkpoint",load=0):
+			"""
+			Args:
+			  learning_rate: float, The learning rate [0.001]
+			  checkpoint_dir: str, The path for checkpoints to be saved [checkpoint]
+			"""
+			self.learning_rate = learning_rate
+			self.checkpoint_dir = checkpoint_dir
+
+			self.step = tf.Variable(0, trainable=False)
+			
+			self.a = tf.placeholder("float", [None, ACTIONS])
+			self.y = tf.placeholder("float", [None])
+			
+			self.readout_action = tf.reduce_sum(tf.mul(self.readout, self.a), reduction_indices = 1)
+			self.cost = tf.reduce_mean(tf.square(y - readout_action))
+			train_step = tf.train.AdamOptimizer(learning_rate).minimize(cost)
+			
+			tf.initialize_all_variables().run()
+			
+			if load :
+				self.load(checkpoint_dir)
+
+			start_time = time.time()
+			start_iter = self.step.eval()
+			
+			step = 0
+			while 1:
+				step = step + 1
+				communication.wait()
+
+				debug("nb cities: %d" % len(situation.player_cities))
+				debug("nb pieces: %d" % len(situation.player_pieces))
+
+				situation.check()
+				# RANDOM
+				for city_id in situation.player_cities:
+					#think.choose_relevant_random_production(situation, communication, city_id)
+				piece_ids = situation.player_pieces.keys()
+				for piece_id in piece_ids:
+					piece = situation.player_pieces[piece_id]
+					loc = situation.get_player_piece_location(piece_id)
+					depth = situation.pieces_types[piece.piece_type].speed
+					heuristic = situation.get_tiles_distance
+					destinations, came_from = algos.breadth_first_search_all(loc, depth, neighbors, cost, heuristic, crossable)
+					if len(destinations) > 0:
+						#destination = random.choice(destinations)
+						#communication.action("moves %d %d %d" % (piece_id, destination[0], destination[1]))
+				if step % 10 == 0:
+					situation.show()
+				if step != 0 and step % 10000 == 0:
+					self.save(checkpoint_dir, step)
+				if step % 50 == 1:
+					print("Epoch: [%2d] time: %4.4f, loss: %.8f" % (step, time.time() - start_time, cost))
+				communication.end_turn()
