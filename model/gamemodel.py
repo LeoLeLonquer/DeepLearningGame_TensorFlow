@@ -42,7 +42,7 @@ class GameModel(Model):
 
 		situation = situation.Situation()
 		parser = parser.Parser(situation)
-		communication = communication.Communication(parser, server, server_fd)
+		self.communication = communication.Communication(parser, server, server_fd)
 
 	def build_model(self):
 		# network weights
@@ -69,12 +69,15 @@ class GameModel(Model):
 			self.checkpoint_dir = checkpoint_dir
 
 			self.step = tf.Variable(0, trainable=False)
+			one = tf.constant(1)
+			new_value = tf.add(step, one)
+			update = tf.assign(step, new_value)
 			
-			self.a = tf.placeholder("float", [None, ACTIONS])
-			self.y = tf.placeholder("float", [None])
+			a = tf.placeholder("float", [None, ACTIONS])
+			y = tf.placeholder("float", [None])
 			
-			self.readout_action = tf.reduce_sum(tf.mul(self.readout, self.a), reduction_indices = 1)
-			self.cost = tf.reduce_mean(tf.square(y - readout_action))
+			readout_action = tf.reduce_sum(tf.mul(self.readout, a), reduction_indices = 1)
+			cost = tf.reduce_mean(tf.square(y - readout_action))
 			train_step = tf.train.AdamOptimizer(learning_rate).minimize(cost)
 			
 			tf.initialize_all_variables().run()
@@ -83,11 +86,12 @@ class GameModel(Model):
 				self.load(checkpoint_dir)
 
 			start_time = time.time()
-			start_iter = self.step.eval()
 			
-			step = 0
+			nb = 0
 			while 1:
-				step = step + 1
+				nb = nb + 1
+				sess.run(update) #sess += 1
+				
 				communication.wait()
 
 				debug("nb cities: %d" % len(situation.player_cities))
@@ -139,12 +143,12 @@ class GameModel(Model):
 						#communication.action("moves %d %d %d" % (piece_id, destination[0], destination[1]))
 						
 				# Show situation 
-				if step % 10 == 0:
+				if nb % 10 == 0:
 					situation.show()
 				# Save checkpoint each 1000 steps
-				if step != 0 and step % 1000 == 0:
+				if nb != 0 and nb % 1000 == 0:
 					self.save(checkpoint_dir, step)
 				# Show current progress
-				if step % 1000 == 1:
+				if nb % 1000 == 1:
 					print("Epoch: [%2d] time: %4.4f, loss: %.8f" % (step, time.time() - start_time, cost))
 				communication.end_turn()
