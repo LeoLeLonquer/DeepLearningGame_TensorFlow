@@ -5,7 +5,7 @@ import tensorflow as tf
 class Model(object):
 	"""Abstract object representing a Reader model."""
 	def __init__(self):
-	self.data = None
+		self.data = None
 
 	def get_model_dir(self):
 		model_dir = self.dataset
