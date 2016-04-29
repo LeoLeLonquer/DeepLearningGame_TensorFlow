@@ -5,17 +5,17 @@ import socket
 import select
 import time
 
-import algos
-import parser
-import communication
-import situation
-import tools
-import think
+from tools import algos
+from tools import parser
+from tools import communication
+from tools import situation
+from tools import tools
+from tools import think
 
 import tensorflow as tf
 
 from .base import Model
-from utils import conv2d, max_pool_2x2
+from ops import conv2d, max_pool_2x2
 
 debug = tools.debug
 
@@ -26,7 +26,7 @@ class GameModel(Model):
 		self.build_model()
 		self.init_server(server_name,server_port)
 		
-	def init_server():
+	def init_server(self,server_name,server_port):
 		server_name = server_name
 		server_port = int(server_port)
 
@@ -46,7 +46,7 @@ class GameModel(Model):
 
 	def build_model(self):
 		# network weights
-		#W_conv1 = tf.Variable(tf.truncated_normal([8, 8, 4, 32], stddev = 0.01)) #valeurs bidons
+		W_conv1 = tf.Variable(tf.truncated_normal([8, 8, 4, 32], stddev = 0.01)) #valeurs bidons
 		#b_conv1 = tf.Variable(tf.constant(0.01, shape = [32]))
 
 		# input layer
@@ -127,7 +127,7 @@ class GameModel(Model):
 			# Define cities production
 			
 			for city_id in situation.player_cities:
-				#think.choose_relevant_random_production(situation, communication, city_id)
+				think.choose_relevant_random_production(situation, communication, city_id)
 			
 			# Define pieces action
 			
@@ -139,8 +139,8 @@ class GameModel(Model):
 				heuristic = situation.get_tiles_distance
 				destinations, came_from = algos.breadth_first_search_all(loc, depth, neighbors, cost, heuristic, crossable)
 				if len(destinations) > 0:
-					#destination = random.choice(destinations)
-					#communication.action("moves %d %d %d" % (piece_id, destination[0], destination[1]))
+					destination = random.choice(destinations)
+					communication.action("moves %d %d %d" % (piece_id, destination[0], destination[1]))
 					
 			# Show situation 
 			if nb % 10 == 0:

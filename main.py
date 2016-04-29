@@ -1,4 +1,5 @@
 import os
+import sys
 import pprint 
 import tensorflow as tf
 
@@ -18,6 +19,7 @@ if len(sys.argv) != 3:
 	sys.exit(1)
 		
 def main(_):
+	print "Cest le main"
 	pp.pprint(flags.FLAGS.__flags)
 
 	if not os.path.exists(FLAGS.checkpoint_dir):
@@ -26,7 +28,7 @@ def main(_):
 	with tf.Session() as sess:
 		model = GameModel(sess,sys.argv[1],sys.argv[2])
 
-		if ! FLAGS.is_train:
+		if not FLAGS.is_train:
 		  model.load(FLAGS.checkpoint_dir)
 
 		model.play(learning_rate=FLAGS.learning_rate, checkpoint_dir=FLAGS.checkpoint_dir)

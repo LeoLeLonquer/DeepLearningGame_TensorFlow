@@ -1,0 +1,1 @@
+from .gamemodel import GameModel
