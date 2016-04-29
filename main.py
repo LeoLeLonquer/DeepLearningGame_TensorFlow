@@ -29,7 +29,7 @@ def main(_):
 		model = GameModel(sess,sys.argv[1],sys.argv[2])
 
 		if not FLAGS.is_train:
-		  model.load(FLAGS.checkpoint_dir)
+			model.load(FLAGS.checkpoint_dir)
 
 		model.play(learning_rate=FLAGS.learning_rate, checkpoint_dir=FLAGS.checkpoint_dir)
 
