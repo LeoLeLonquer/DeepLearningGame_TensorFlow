@@ -13,6 +13,9 @@ from tools import tools
 from tools import think
 
 import tensorflow as tf
+import random
+import numpy as np
+from collections import deque
 
 from .base import Model
 from ops import *
@@ -24,7 +27,10 @@ INITIAL_EPSILON = 1.0 # starting value of epsilon
 ACTIONS = 7 # number of valid actions
 OBSERVE = 50. # timesteps to observe before training
 EXPLORE = 20. # frames over which to anneal epsilon
-
+GAMMA = 0.99 # decay rate of past observations
+REPLAY_MEMORY = 9000 # number of previous transitions to remember
+BATCH = 32 # size of minibatch
+NB_CHUNK = 25
 class GameModel(Model):
 	"""Deep Game Network."""
 	def __init__(self, sess,server_name, server_port):
@@ -133,37 +139,35 @@ class GameModel(Model):
 		cost = tf.reduce_mean(tf.square(y - readout_action))
 		train_step = tf.train.AdamOptimizer(learning_rate).minimize(cost)		
 		
+		# store the previous observations in replay memory
+    		D = deque()
+    
+    		# get the first state by doing nothing and preprocess the image to 80x80x4
+		do_nothing = np.zeros(ACTIONS)
+		do_nothing[0] = 1  # TODO : check if 0 is do_nothing
+	
+		# initialize all variables
 		tf.initialize_all_variables().run()
 		
 		sess.run(self.step.assign(0))
 		
+		# loading networks
 		if load :
 			self.load(checkpoint_dir)
 		
 		start_time = time.time()
 
-		nb = 0
+		t = 0
 		epsilon = INITIAL_EPSILON
 		
-		while nb < OBSERVE:
-			nb+=1
-			piece_ids = situation.player_pieces.keys()
-			for piece_id in piece_ids:
-				self.play_random_action(piece_id)
-
-		while nb>= OBSERVE:
-			# scale down epsilon
-			if epsilon > FINAL_EPSILON:
-				epsilon -= (INITIAL_EPSILON - FINAL_EPSILON) / EXPLORE
-			
-			#train_step.run(feed_dict = {
-			      
-			#  })
-			
-			nb+=1
-			
-			sess.run(update) #step += 1
-			
+		# Static allocation to be safe
+		readout = [None]*NB_CHUNK
+		s_t = [None]*NB_CHUNK
+		a_t = [[None]*ACTIONS]*NB_CHUNK # vector of vector
+		action_index = [None]*NB_CHUNK
+		r_t = [None]*NB_CHUNK
+		
+		while 1:
 			self.communication.wait()
 
 			debug("nb cities: %d" % len(situation.player_cities))
@@ -171,71 +175,111 @@ class GameModel(Model):
 
 			situation.check()
 			
-			chunks = situation.split(8)
+			chunks = situation.split(10)
 			
-			## Define pieces in chunks
 			for i in range(len(chunks)):
-				chunk = chunks[i]
-				debug("chunk : \n" %chunk)
-				debug("chunk len: %d" %len(chunk))
-				for q in range(len(chunk)):
-					for r in range(len(chunk[q])):
-						if chunk[q][r].visible == False:
-							chunk[q][r] = 0
-						else:
-							if chunk[q][r].content == None:
-								if chunk[q][r].terrain == ssituation.GROUND:
-									chunk[q][r] = 1
-								else:
-									chunk[q][r] = 2
-							else:
-								if isinstance(chunk[q][r].content, ssituation.City):
-									chunk[q][r] = 3
-								elif isinstance(chunk[q][r].content, ssituation.OwnedCity):
-									chunk[q][r] = 4 + chunk[q][r].content.owner # 4 et 5 !!!
-								else:
-									chunk[q][r] = 6 + chunk[q][r].content.piece_type + chunk[q][r].content.owner * len(situation.pieces_types)
-					
-					## launch Deep Q Network
-					
-					
-					
-					## Store output vector
-					
-			# Define cities production (TODO : define what to do with ?)
+				s_t[i] = chunks[i]
+				#print s_t[i]
+				#print len(s_t[i])
+				
+				#evaluate with current model 
+				readout_t[i] = readout.eval(feed_dict = {s : [s_t[i]]})[0]
+	
+				a_t[i] = np.zeros([ACTIONS])
+				#choose an action for every chunk
+				if random.random() <= epsilon or t <= OBSERVE:
+					a_t[i][random.randrange(ACTIONS)] = 1
+				else:
+					# TODO : instead of taking the best, apply ponderation vector
+				    	action_index = np.argmax(readout_t[i]) #this gets only the best action_index
+				    	a_t[i][action_index] = 1
 			
-			for city_id in situation.player_cities:
-				think.choose_relevant_random_production(situation, self.communication, city_id)
-			
-			# Define pieces action
-			
+			# scale down epsilon
+			if epsilon > FINAL_EPSILON:
+				epsilon -= (INITIAL_EPSILON - FINAL_EPSILON) / EXPLORE
+		
+		
+			# play actions
 			piece_ids = situation.player_pieces.keys()
 			for piece_id in piece_ids:
-				## Get the output vector and multiply it to ProbaVector
-					# for ex: Water = 0 - City = 0.8 - T1 = 0.3 etc..
+				#while can go further 
+				for n in range(the_situation.pieces_types[piece.piece_type].speed):
+					## Get the output vector from the right chunk and multiply it to ProbaVector
+						# for ex: Water = 0 - City = 0.8 - T1 = 0.3 etc..
 				
-				
-				## With proba Epsilon send the action ahead to the server else send a random action
-				
-				
-				
+					# Send the action to the server
+						# EITHER play the random action
+						#self.play_random_action(piece_id)			
+					
+						# OR go in the right direction
+					directions = the_situation.directions
+					for n in range(the_situation.pieces_types[piece.piece_type].speed):
+						if not the_situation.is_player_piece(piece_id):
+							break
+						loc = the_situation.get_player_piece_location(piece_id)
+						result = []
+						for dir in range(len(directions)):
+							next_location = loc[0] + directions[dir][0], loc[1] + directions[dir][1]
+							if the_situation.can_player_piece_be_on(piece_id, next_location):
+								result.append(dir)
+						if len(result) > 0:
+							direction = random.choice(result) # choose the one gave by the output_vector x ProbaVector
+							communication.action("move %d %d" % (piece_id, direction))
+					
 				## Observe the action and evaluate the result (Q function)
+						## FOR THE MOMENT 
+					# check only if alive				
+				if not the_situation.is_player_piece(piece_id):
+					r_t[i] = -1
+				else:
+					r_t[i] = 1
+				# TODO : check if game ended
 				
+				#state result
+				#s_t1 = 
 				
+				# store the transition in D
+				D.append((s_t[i], a_t[i], r_t, s_t1, terminal))
+
+		if t> OBSERVE:
+			# sample a minibatch to train on
+		    	minibatch = random.sample(D, BATCH)
+
+		    	# get the batch variables
+		   	s_j_batch = [d[0] for d in minibatch]
+		    	a_batch = [d[1] for d in minibatch]
+		    	r_batch = [d[2] for d in minibatch]
+		    	s_j1_batch = [d[3] for d in minibatch]
+
+		    	y_batch = []
+		    	readout_j1_batch = readout.eval(feed_dict = {s : s_j1_batch})
+		    	for i in range(0, len(minibatch)):
+				# if terminal only equals reward
+				if minibatch[i][4]:
+				    	y_batch.append(r_batch[i])
+				else:
+				    	y_batch.append(r_batch[i] + GAMMA * np.max(readout_j1_batch[i]))
+
+		    	# perform gradient step
+		    	train_step.run(feed_dict = {
+		        	y : y_batch,
+		        	a : a_batch,
+		        	s : s_j_batch})
+
+		# update the old values
+		s_t = s_t1
+		t += 1
+			
 				
-				
-				## Old
-				self.play_random_action(piece_id)
-				
-			# Show situation 
-			if nb % 10 == 0:
-				print nb
-				#situation.show()
-			# Save checkpoint each 300 steps
-			if nb != 0 and nb % 100 == 0:
-				self.save(checkpoint_dir, step)
-			# Show current progress
-			step = sess.run(self.step)
-			#if nb % 100 == 1:
-			#	print("Epoch: [%2d] time: %4.4f, loss: %.8f" % (step, time.time() - start_time, cost))
-			self.communication.end_turn()
+		# Show situation 
+		if t % 10 == 0:
+			print t
+			#situation.show()
+		# Save checkpoint each 300 steps
+		if t != 0 and t % 100 == 0:
+			self.save(checkpoint_dir, step)
+		# Show current progress
+		step = sess.run(self.step)
+		#if t % 100 == 1:
+		#	print("Epoch: [%2d] time: %4.4f, loss: %.8f" % (step, time.time() - start_time, cost))
+		self.communication.end_turn()
