@@ -163,6 +163,7 @@ class GameModel(Model):
 		# Static allocation to be safe
 		readout = [None]*NB_CHUNK
 		s_t = [None]*NB_CHUNK
+		s_t1 = [None]*NB_CHUNK
 		a_t = [[None]*ACTIONS]*NB_CHUNK # vector of vector
 		action_index = [None]*NB_CHUNK
 		r_t = [None]*NB_CHUNK
@@ -232,53 +233,59 @@ class GameModel(Model):
 					r_t[i] = -1
 				else:
 					r_t[i] = 1
+				
+				self.communication.end_turn()
+				situation.check()
+				chunks = situation.split(10)
 				# TODO : check if game ended
+				terminal = 0
 				
 				#state result
-				#s_t1 = 
+				for i in range(len(chunks)):
+					s_t1[i] = s_t[i]
 				
 				# store the transition in D
 				D.append((s_t[i], a_t[i], r_t, s_t1, terminal))
 
-		if t> OBSERVE:
-			# sample a minibatch to train on
-		    	minibatch = random.sample(D, BATCH)
+				if t> OBSERVE:
+					# sample a minibatch to train on
+					minibatch = random.sample(D, BATCH)
 
-		    	# get the batch variables
-		   	s_j_batch = [d[0] for d in minibatch]
-		    	a_batch = [d[1] for d in minibatch]
-		    	r_batch = [d[2] for d in minibatch]
-		    	s_j1_batch = [d[3] for d in minibatch]
+					# get the batch variables
+					s_j_batch = [d[0] for d in minibatch]
+					a_batch = [d[1] for d in minibatch]
+					r_batch = [d[2] for d in minibatch]
+					s_j1_batch = [d[3] for d in minibatch]
 
-		    	y_batch = []
-		    	readout_j1_batch = readout.eval(feed_dict = {s : s_j1_batch})
-		    	for i in range(0, len(minibatch)):
-				# if terminal only equals reward
-				if minibatch[i][4]:
-				    	y_batch.append(r_batch[i])
-				else:
-				    	y_batch.append(r_batch[i] + GAMMA * np.max(readout_j1_batch[i]))
+					y_batch = []
+					readout_j1_batch = readout.eval(feed_dict = {s : s_j1_batch})
+					for i in range(0, len(minibatch)):
+					# if terminal only equals reward
+					if minibatch[i][4]:
+							y_batch.append(r_batch[i])
+					else:
+							y_batch.append(r_batch[i] + GAMMA * np.max(readout_j1_batch[i]))
 
-		    	# perform gradient step
-		    	train_step.run(feed_dict = {
-		        	y : y_batch,
-		        	a : a_batch,
-		        	s : s_j_batch})
+					# perform gradient step
+					train_step.run(feed_dict = {
+						y : y_batch,
+						a : a_batch,
+						s : s_j_batch})
 
-		# update the old values
-		s_t = s_t1
-		t += 1
+			# update the old values
+			for i in range(len(chunks)):
+				s_t[i] = s_t1[i]
+			t += 1
 			
-				
-		# Show situation 
-		if t % 10 == 0:
-			print t
-			#situation.show()
-		# Save checkpoint each 300 steps
-		if t != 0 and t % 100 == 0:
-			self.save(checkpoint_dir, step)
-		# Show current progress
-		step = sess.run(self.step)
-		#if t % 100 == 1:
-		#	print("Epoch: [%2d] time: %4.4f, loss: %.8f" % (step, time.time() - start_time, cost))
-		self.communication.end_turn()
+			# Show situation 
+			if t % 10 == 0:
+				print t
+				#situation.show()
+			# Save checkpoint each 300 steps
+			if t != 0 and t % 100 == 0:
+				self.save(checkpoint_dir, step)
+			# Show current progress
+			step = sess.run(self.step)
+			#if t % 100 == 1:
+			#	print("Epoch: [%2d] time: %4.4f, loss: %.8f" % (step, time.time() - start_time, cost))
+			
