@@ -1,85 +1,35 @@
-import re
-
-GROUND=0
-WATER=1
+import handler
+import tools
 
 class Tile:
 	def __init__(self, terrain, location):
 		self.terrain = terrain
-		self.explored = False
 		self.content = None
 		self.visible = False
-		self.city = False
 		self.location = location
-	def get_terrain(self):
-		return self.terrain
-	def get_parent(self):
-		return None
+		self.parent = None
 	def get_location(self):
 		return self.location
-	def get_content(self):
-		return self.content
-	def is_visible(self):
-		return self.visible
-	def set_terrain(self, terrain):
-		self.terrain = terrain
-	def set_content(self, content):
-		self.content = content
-	def set_visible(self):
-		self.visible = True
-		self.explored = True
-	def set_explored(self):
-		self.visible = False
-		self.explored = True
-	def set_city(self):
-		self.city = True
-	def string(self):
-		if not self.explored:
-			return "  "
-		if not self.visible:
-			if self.city:
-				return "O "
-			if self.terrain == WATER:
-				return ". "
-			if self.terrain == GROUND:
-				return "+ "
-		else:
-			if self.content == None:
-				if self.terrain == WATER:
-					return ". "
-				else:
-					return "+ "
-			else:
-				return self.content.string()
-		assert False
 
 class Piece:
-	def __init__(self, piece_id, piece_type, owner, piece_symbol):
+	# States used for transporters.
+	TRAVEL_TAKE=0
+	TRAVEL_LAND=1
+	TAKE=2
+	LAND=3
+	def __init__(self, piece_id, piece_type_id, owner, piece_hits):
+		self.piece_hits = piece_hits
 		self.piece_id = piece_id
-		self.piece_type = piece_type
+		self.piece_type_id = piece_type_id
 		self.owner = owner
-		self.piece_symbol = piece_symbol
 		self.content = []
+		self.transport = []
 		self.parent = None
-	def get_parent(self):
-		return self.parent
-	def string(self):
-		return self.piece_symbol + ("%d" % self.owner)
-	def get_piece_type(self):
-		return self.piece_type
+		self.state = None
+		self.take_group = None
+		self.affectation = None
 	def get_location(self):
 		return self.parent.get_location()
-	def get_piece_id(self):
-		return self.piece_id
-	def get_owner(self):
-		return self.owner
-	def set_parent(self, parent):
-		self.parent = parent
-	def __repr__(self):
-		if self.parent is None:
-			return "piece: id=%d owner=%d type=%d loc=None parent=None" % (self.piece_id, self.owner, self.piece_type)
-		q, r = self.get_location()
-		return "piece: id=%d owner=%d type=%d loc=(%d,%d) parent=%s" % (self.piece_id, self.owner, self.piece_type, q, r, str(self.parent))
 
 class OwnedCity:
 	def __init__(self, city_id, parent, owner):
@@ -88,19 +38,8 @@ class OwnedCity:
 		self.parent = parent
 		self.production = None
 		self.content = []
-	def get_parent(self):
-		return self.parent
-	def get_owner(self):
-		return self.owner
 	def get_location(self):
 		return self.parent.get_location()
-	def string(self):
-		return "O%d" % self.owner
-	def set_parent(self, parent):
-		self.parent = parent
-	def __repr__(self):
-		q, r = self.get_location()
-		return "owned_city: owner=%d loc=(%d,%d)" % (self.owner, q, r)
 
 class City:
 	def __init__(self, city_id, parent):
@@ -108,39 +47,27 @@ class City:
 		self.parent = parent
 	def get_location(self):
 		return self.parent.get_location()
-	def string(self):
-		return "O "
-	def set_parent(self, parent):
-		self.parent = parent
-	def __repr__(self):
-		q, r = self.get_location()
-		return "city: loc=(%d,%d)" % (q, r)
 
 class PieceType:
 	def __init__(self, dictionary):
-		self.repr = "PieceType: {"
 		for k, v in dictionary.items():
-			self.repr += str(k) + ":" + str(v) + ", "
 			setattr(self, k, v)
-		self.repr += "}"
 
-	def __repr__(self):
-		return self.repr
+class Situation(handler.Handler):
 
-class Situation:
+	GROUND=0
+	WATER=1
+
 	def __init__(self):
 		self.player_cities = {}
 		self.player_pieces = {}
-		self.other_cities = {}
-		self.ennemy_pieces = {}
-		self.directions = [ (+1,  0), (+1, -1), ( 0, -1), (-1,  0), (-1, +1), ( 0, +1) ]
+		self.enemy_cities = {}
+		self.enemy_pieces = {}
+		self.free_cities = {}
+		self.terrains = [self.GROUND, self.WATER]
 
 	def get_free_cities(self):
-		result = []
-		for city in self.other_cities.values():
-			if isinstance(city, City):
-				result.append(city)
-		return result
+		return self.free_cities.values()
 
 	def get_player_pieces(self):
 		return self.player_pieces.values()
@@ -148,372 +75,513 @@ class Situation:
 	def get_player_cities(self):
 		return self.player_cities.values()
 
-	def get_ennemy_pieces(self):
-		return self.ennemy_pieces.values()
+	def get_enemy_pieces(self):
+		return self.enemy_pieces.values()
 
-	def get_ennemy_cities(self):
-		result = []
-		for city in self.other_cities.values():
-			if isinstance(city, OwnedCity):
-				assert city.get_owner() != self.player_id
-				result.append(city)
-		return result
+	def get_enemy_cities(self):
+		return self.enemy_cities.values()
 
 	def check(self):
 		err = False
-		for piece_id in self.ennemy_pieces:
-			piece = self.ennemy_pieces[piece_id]
+		# Check enemy pieces.
+		for piece_id in self.enemy_pieces:
+			piece = self.enemy_pieces[piece_id]
 			if piece.owner == self.player_id:
-				print "ERR: other piece_id=%d belongs to player!" % piece_id
+				tools.warn("enemy piece_id %d belongs to player" % piece_id)
 				err = True
+			if piece_id in self.player_pieces:
+				tools.warn("enemy piece_id %d also in player_pieces" % piece_id)
+				err = True
+			parent = piece.parent
+			if isinstance(parent, Tile):
+				if piece != parent.content:
+					q, r = parent.get_location()
+					tools.warn("enemy piece_id %d invalid parent %d %d %s" % (piece_id, q, r, str(parent)))
+					err = True
+		# Check player pieces.
 		for piece_id in self.player_pieces:
 			piece = self.player_pieces[piece_id]
 			if piece.owner != self.player_id:
-				print "ERR: player piece_id=%d doesn't belong to player!" % piece_id
+				tools.warn("player piece_id %d belongs to enemy" % piece_id)
 				err = True
-		for piece_id in self.ennemy_pieces:
-			if piece_id in self.player_pieces:
-				print "ERR: piece_id=%d in two!" % piece_id
-				err = True
-		for piece_id in self.player_pieces:
-			if piece_id in self.ennemy_pieces:
-				print "ERR: piece_id=%d in two!" % piece_id
-				err = True
-		for piece_id in self.ennemy_pieces:
-			piece = self.ennemy_pieces[piece_id]
-			parent = piece.get_parent()
+			# Test if piece_id also in enemy_pieces done in the previous loop.
+			parent = piece.parent
 			if isinstance(parent, Tile):
-				if piece != parent.get_content():
+				if piece != parent.content:
 					q, r = parent.get_location()
-					print "ERR: piece_id=%d in tile=(%d,%d) but tile contains=%s" % (piece_id, q, r, str(parent.get_content()))
+					tools.warn("enemy piece_id %d invalid parent %d %d %s" % (piece_id, q, r, str(parent)))
 					err = True
-		for piece_id in self.player_pieces:
-			piece = self.player_pieces[piece_id]
-			parent = piece.get_parent()
-			if isinstance(parent, Tile):
-				if piece != parent.get_content():
-					q, r = parent.get_location()
-					print "ERR: piece_id=%d in tile=(%d,%d) but tile contains=%s" % (piece_id, q, r, str(parent.get_content()))
-					err = True
+		# Check free cities.
+		for city_id in self.free_cities:
+			city = self.free_cities[city_id]
+			parent = city.parent
+			if parent is None or not isinstance(parent, Tile):
+				tools.warn("free city_id %d parent is not a tile %s" % (city_id, str(parent)))
+				err = True
+			if city_id in self.enemy_cities or city_id in self.player_cities:
+				tools.warn("free city_id %d also in enemy_cities or player_cities" % city_id)
+				err = True
+		# Check player cities.
+		for city_id in self.player_cities:
+			city = self.player_cities[city_id]
+			parent = city.parent
+			if parent is None or not isinstance(parent, Tile):
+				tools.warn("player city_id %d parent is not a tile %s" % (city_id, str(parent)))
+				err = True
+			if city_id in self.enemy_cities or city_id in self.free_cities:
+				tools.warn("player city_id %d also in enemy_cities or player_cities" % city_id)
+				err = True
+		# Check enemy cities.
+		for city_id in self.enemy_cities:
+			city = self.enemy_cities[city_id]
+			parent = city.parent
+			if parent is None or not isinstance(parent, Tile):
+				tools.warn("enemy city_id %d parent is not a tile %s" % (city_id, str(parent)))
+				err = True
+			if city_id in self.player_cities or city_id in self.free_cities:
+				tools.warn("enemy city_id %d also in enemy_cities or player_cities" % city_id)
+				err = True
+		# Check the view.
 		for q in range(self.width):
 			for r in range(self.height):
-				content = self.view[q][r].content
+				tile = self.view[q][r]
+				content = tile.content
 				if content is None:
-					continue
-				if isinstance(content, Piece):
-					if content.piece_id not in self.player_pieces and content.piece_id not in self.ennemy_pieces:
-						print "ERR: piece_id=%d on map not associated to other or player!" % content.piece_id
+					pass
+				elif content.parent != tile:
+					message = "element %s at %d %d is not the tile itself"
+					tools.warn(message % (str(content), q, r))
+					err = True
+				elif isinstance(content, Piece):
+					piece_id = content.piece_id
+					if piece_id not in self.player_pieces and piece_id not in self.enemy_pieces:
+						message = "piece_id %d at %d %d is neither in player_pieces nor in enemy_pieces"
+						tools.warn(message % (piece_id, q, r))
 						err = True
-		assert not err
+				elif isinstance(content, City):
+					city_id = content.city_id
+					if city_id not in self.free_cities:
+						message = "free city_id %d at %d %d is not in free_cities"
+						tools.warn(message % (city_id, q, r))
+						err = True
+				elif isinstance(content, OwnedCity):
+					city_id = content.city_id
+					if city_id not in self.enemy_cities and city_id not in self.player_cities:
+						message = "owned city_id %d at %d %d is not in enemy_cities nor in player_cities"
+						tools.warn(message % (city_id, q, r))
+						err = True
+				else:
+					tools.warn("unknown content %s" % str(content))
+					err = True
+		if err:
+			raise Exception("integrity error")
 
 	# SET CONFIGURATION
 
+	# The configuration is associated to class attributes created on the fly
+	# (view, width, height, player_id, piece_types).
+	# They are defined while reading the first messages sent by the server.
+	# This way, an attempt to read a configuration not already set will trigger an
+	# exception.
+
 	def set_height(self, height):
-		assert not hasattr(self, "height")
+		#assert not hasattr(self, "height")
 		self.height = height
 		if hasattr(self, "width"):
 			self.view = [[Tile(None, (q, r)) for r in range(self.height)] for q in range(self.width)] 
 
 	def set_width(self, width):
-		assert not hasattr(self, "width")
+		#assert not hasattr(self, "width")
 		self.width = width
 		if hasattr(self, "height"):
 			self.view = [[Tile(None, (q, r)) for r in range(self.height)] for q in range(self.width)] 
 
 	def set_player_id(self, player_id):
-		assert not hasattr(self, "player_id")
+		#assert not hasattr(self, "player_id")
 		self.player_id = player_id
 
-	def set_pieces_types(self, pieces_types):
-		assert not hasattr(self, "pieces_types")
-		self.pieces_types = pieces_types
+	def set_piece_types(self, piece_types):
+		#assert not hasattr(self, "piece_types")
+		self.piece_types = piece_types
 
 	# SHOW VIEW
 
 	def show(self):
-		if not hasattr(self, "width") and not hasattr(self, "height"):
-			print "width and height not set"
+		if not hasattr(self, "width") or not hasattr(self, "height") or not hasattr(self, "player_id"):
+			print "width or height or player_id not set"
 		else:
 			print "width:%d height:%d player_id:%d" % (self.width, self.height, self.player_id)
-			print "#cities:%d #pieces:%d" % (len(self.player_cities), len(self.player_pieces))
 			for r in range(self.height):
-				line = "  " * r
+				line = "  " * r + "\\"
 				for q in range(self.width):
-					line = line + self.view[q][r].string()
+					tile = self.view[q][r]
+					if not tile.visible and tile.terrain is None:
+						line = line + "  "
+					elif not tile.visible:
+						if tile.terrain == self.WATER:
+							line = line + ". "
+						elif tile.terrain == self.GROUND:
+							line = line + "+ "
+						else:
+							#assert False
+							pass
+					elif tile.content == None:
+						if tile.terrain == self.WATER:
+							line = line + ". "
+						elif tile.terrain == self.GROUND:
+							line = line + "+ "
+						else:
+							#assert False
+							pass
+					else:
+						content = tile.content
+						if isinstance(content, Piece):
+							piece_symbol = self.get_piece_type(content.piece_type_id).symbol
+							line = line + piece_symbol + ("%d" % content.owner)
+						elif isinstance(content, City):
+							line = line + "O "
+						elif isinstance(content, OwnedCity):
+							line = line + ("O%d" % content.owner)
+						else:
+							#assert False
+							pass
 				print line
-
-	def split(self, size):
-		assert self.width % size == 0
-		assert self.height % size == 0
-		result = []
-		for qi in range(self.width / size):
-			for ri in range(self.height / size):
-				chunk = [ self.view[qi * size + q][(ri * size):((ri + 1) * size)] for q in range(size) ]
-				result.append(chunk)
-		return result
 
 	# GET INFORMATION ON SITUATION
 
-	def get_player_id(self):
-		return self.player_id
-
-	def get_player_piece_location(self, piece_id):
-		assert piece_id in self.player_pieces
-		return self.player_pieces[piece_id].get_location()
-
 	def get_tile(self, location):
-		assert self.is_in_map(location)
+		#assert self.is_in_map(location)
 		q, r = location
 		return self.view[q][r]
 
 	def get_content(self, location):
-		return self.get_tile(location).get_content()
+		return self.get_tile(location).content
+
+	def get_terrain(self, location):
+		return self.get_tile(location).terrain
 
 	def get_piece_type(self, piece_type_id):
-		assert piece_type_id in self.pieces_types
-		return self.pieces_types[piece_type_id]
+		#assert piece_type_id in self.piece_types
+		return self.piece_types[piece_type_id]
 
 	def get_player_piece(self, piece_id):
-		assert piece_id in self.player_pieces
+		#assert piece_id in self.player_pieces
 		return self.player_pieces[piece_id]
 
+	def get_enemy_piece(self, piece_id):
+		#assert piece_id in self.enemy_pieces
+		return self.enemy_pieces[piece_id]
+
 	def get_player_city(self, city_id):
-		assert city_id in self.player_cities
+		#assert city_id in self.player_cities
 		return self.player_cities[city_id]
-
-	def is_player_piece(self, piece_id):
-		return piece_id in self.player_pieces
-
-	def get_tiles_distance(self, location_a, location_b):
-		qa, ra = location_a
-		qb, rb = location_b
-		return (abs (qa - qb) + abs (qa + ra - qb - rb) + abs (ra - rb)) / 2
 
 	def is_in_map(self, location):
 		q, r = location
 		return 0 <= q and q < self.width and 0 <= r and r < self.height
 
-	def is_tile_visible(self, location):
-		assert self.is_in_map(location)
-		q, r = location
-		return self.view[q][r].visible
-
 	def can_player_piece_be_on(self, piece_id, location):
+		# Get the piece and piece type.
 		piece = self.get_player_piece(piece_id)
-		piece_type = self.get_piece_type(piece.piece_type)
+		piece_type = self.get_piece_type(piece.piece_type_id)
+		# We can't move outside the map.
 		if not self.is_in_map(location):
 			return False
 		tile = self.get_tile(location)
-		content = tile.get_content()
-		if not tile.is_visible() or tile.get_terrain() not in piece_type.terrains:
+		# We can't move on an invisible tile or in an inadequate terrain.
+		if not tile.visible or tile.terrain not in piece_type.terrains:
 			return False
+		# The piece can go in an empty tile.
+		content = tile.content
+		if content == None:
+			return True
+		# The piece can go in a city if it can invade or if it is player's city.
 		if isinstance(content, City):
 			return piece_type.can_invade
 		if isinstance(content, OwnedCity):
 			return content.owner == self.player_id or piece_type.can_invade
-		if content == None:
-			return True
+		# The piece can attack.
 		if content.owner != self.player_id:
 			return True
-		other_piece_type = self.get_piece_type(content.piece_type)
+		# The piece may also be transported.
+		other_piece_type = self.get_piece_type(content.piece_type_id)
 		return piece_type.piece_type_id in other_piece_type.transportable
+
+	def is_player_piece(self, piece_id):
+		return piece_id in self.player_pieces
 
 	def is_tile_none(self, location):
 		return self.get_content(location) is None
 
 	def is_tile_player_piece(self, location):
 		content = self.get_content(location)
-		return content is not None and isinstance(content, Piece) and content.owner == self.player_id
+		return isinstance(content, Piece) and content.owner == self.player_id
 
 	def is_tile_player_city(self, location):
 		content = self.get_content(location)
-		return content is not None and isinstance(content, OwnedCity) and content.owner == self.player_id
+		return isinstance(content, OwnedCity) and content.owner == self.player_id
 
-	def is_tile_ennemy_city(self, location):
+	def is_tile_enemy_city(self, location):
 		content = self.get_content(location)
-		return content is not None and isinstance(content, OwnedCity) and content.owner != self.player_id
+		return isinstance(content, OwnedCity) and content.owner != self.player_id
 
-	def is_tile_city(self, location):
+	def is_tile_free_city(self, location):
 		content = self.get_content(location)
-		return content is not None and isinstance(content, City)
+		return isinstance(content, City)
 
-	def is_tile_ennemy_piece(self, location):
+	def is_tile_enemy_piece(self, location):
 		content = self.get_content(location)
-		return content is not None and isinstance(content, Piece) and content.owner != self.player_id
+		return isinstance(content, Piece) and content.owner != self.player_id
 
 	# CHANGES ON SITUATION
 
 	def set_visible_none(self, location, terrain):
+		# The previous content can't be:
+		# - a city: a city can't move;
+		# - an owned city: an owned city can't move.
+		# - a piece of the player: the piece first leave the terrain.
+		# The previous content can be:
+		# - nothing;
+		# - a piece of the enemy.
 		tile = self.get_tile(location)
-		content = tile.get_content()
-		if content is not None:
-			assert isinstance(content, Piece)
-			piece_id = content.get_piece_id()
-			assert piece_id not in self.player_pieces
-			assert piece_id in self.ennemy_pieces
-			del self.ennemy_pieces[piece_id]
-		tile.set_visible()
-		tile.set_content(None)
-		tile.set_terrain(terrain)
+		if tile.content is not None:
+			#assert isinstance(tile.content, Piece)
+			piece_id = tile.content.piece_id
+			#assert piece_id not in self.player_pieces
+			#assert piece_id in self.enemy_pieces
+			del self.enemy_pieces[piece_id]
+		tile.visible = True
+		tile.content = None
+		tile.terrain = terrain
 
 	def set_visible_owned_city(self, location, terrain, city_id, owner):
 		tile = self.get_tile(location)
-		tile.set_visible()
-		tile.set_city()
-		tile.set_terrain(terrain)
-		content = self.get_content(location)
-		if content == None:
+		tile.visible = True
+		tile.terrain = terrain
+		if tile.content is None:
 			city = OwnedCity(city_id, tile, owner)
-			tile.set_content(city)
+			tile.content = city
 			if owner == self.player_id:
 				self.player_cities[city_id] = city
 			else:
-				self.other_cities[city_id] = city
-		elif isinstance(content, City):
-			assert city_id in self.other_cities
-			del self.other_cities[city_id]
+				self.enemy_cities[city_id] = city
+		elif isinstance(tile.content, City):
+			# If the previous element was a City, then it was previously
+			# defined in dictionnary (free_cities). It must be removed from
+			# this dictionnary.
+			#assert city_id in self.free_cities
+			del self.free_cities[city_id]
 			city = OwnedCity(city_id, tile, owner)
-			tile.set_content(city)
+			tile.content = city
 			if owner == self.player_id:
 				self.player_cities[city_id] = city
 			else:
-				self.other_cities[city_id] = city
+				self.enemy_cities[city_id] = city
 		else:
+			#assert isinstance(tile.content, OwnedCity)
 			if owner == self.player_id:
-				if content.get_owner() == owner:
+				# The owned city now belongs to the player.
+				# If it already belongs to the player, do nothing.
+				# Otherwise, it must be removed from enemy_cities and recreated
+				# as a city owned by the player.
+				if tile.content.owner == owner:
+					#assert city_id in self.player_cities
 					pass
 				else:
-					assert city_id in self.other_cities
-					del self.other_cities[city_id]
+					#assert city_id in self.enemy_cities
+					del self.enemy_cities[city_id]
 					city = OwnedCity(city_id, tile, owner)
-					tile.set_content(city)
+					tile.content = city
 					self.player_cities[city_id] = city
 			else:
-				if city_id in self.other_cities:
-					del self.other_cities[city_id]
+				# The owned city now belongs to the enemy. Remove corresponding
+				# reference in dictionnaries and create a new owned city.
+				if city_id in self.enemy_cities:
+					del self.enemy_cities[city_id]
 				if city_id in self.player_cities:
 					del self.player_cities[city_id]
 				city = OwnedCity(city_id, tile, owner)
-				tile.set_content(city)
+				tile.content = city
 				if owner == self.player_id:
 					self.player_cities[city_id] = city
 				else:
-					self.other_cities[city_id] = city
+					self.enemy_cities[city_id] = city
 
 	def set_visible_city(self, location, terrain, city_id):
+		# Keep it simple: recreate the city and reset the tile.
 		tile = self.get_tile(location)
-		tile.set_visible()
-		tile.set_city()
-		tile.set_terrain(terrain)
-		assert not isinstance(tile.get_content(), Piece)
+		tile.visible = True
+		tile.terrain = terrain
+		#assert not isinstance(tile.content, Piece)
+		#assert not isinstance(tile.content, OwnedCity)
 		city = City(city_id, tile)
-		self.other_cities[city_id] = city
-		tile.set_content(city)
+		self.free_cities[city_id] = city
+		tile.content = city
 
-	def set_visible_piece(self, location, terrain, owner, piece_symbol, piece_id, piece_type):
+	def set_visible_piece(self, location, terrain, owner, piece_id, piece_type_id, piece_hits):
 		tile = self.get_tile(location)
-		tile.set_terrain(terrain)
-		content = tile.get_content()
-		if content != None:
-			assert isinstance(content, Piece)
-			content.set_parent(None)
-			if content.get_owner() != self.player_id:
-				del self.ennemy_pieces[content.get_piece_id()]
+		tile.terrain = terrain
+		# Maybe there is already something in the tile. Either it is the piece itself, or
+		# it must be an enemy piece which can be deleted (killed by the player piece).
+		# It can't be another player piece (a delete_piece precedes the set_visible event).
+		if tile.content != None:
+			#assert isinstance(tile.content, Piece)
+			tile.content.parent = None
+			if tile.content.owner != self.player_id:
+				del self.enemy_pieces[tile.content.piece_id]
 			else:
-				assert piece_id == content.get_piece_id()
+				#assert piece_id == tile.content.piece_id
+				pass
+		# Retrieve the existing player piece or create a new one for other.
 		if owner == self.player_id:
-			assert piece_id in self.player_pieces
+			# Must have been inserted while processing create_piece event.
+			# We must update the piece_hits.
+			#assert piece_id in self.player_pieces
 			piece = self.player_pieces[piece_id]
+			piece.piece_hits = piece_hits
 		else:
-			piece = Piece(piece_id, piece_type, owner, piece_symbol)
-			self.ennemy_pieces[piece_id] = piece
-		piece.set_parent(tile)
-		tile.set_visible()
-		tile.set_content(piece)
+			piece = Piece(piece_id, piece_type_id, owner, piece_hits)
+			self.enemy_pieces[piece_id] = piece
+		piece.parent = tile
+		tile.visible = True
+		tile.content = piece
 
 	def set_explored(self, location, terrain):
+		# XXX: the tile is now not-visible. Its content was either:
+		#   1. a player piece which moved in other tile,
+		#   2. or a player piece which is dead,
+		#   3. or an piece of another player.
+		# For 1., it's ok, the piece will appear in other tile. For 2., a
+		# delete_piece will come. But, for 3., we must wait the end of the
+		# turn and flush the arrays for not-visible pieces and cities.
 		tile = self.get_tile(location)
-		content = self.get_content(location)
-		tile.set_content(None)
-		tile.set_explored()
+		content = tile.content
 		if content != None:
-			content.set_parent(None)
+			content.parent = None
 			if isinstance(content, City):
-				del self.other_cities[content.city_id]
+				del self.free_cities[content.city_id]
 			elif isinstance(content, OwnedCity):
-				assert content.owner != self.player_id
-				assert content.city_id in self.other_cities
-				del self.other_cities[content.city_id]
+				# A lose_city must arrive before the corresponding set_explored.
+				#assert content.owner != self.player_id
+				#assert content.city_id in self.enemy_cities
+				del self.enemy_cities[content.city_id]
 			else:
-				assert isinstance(content, Piece)
-				assert content.get_owner() != self.player_id
-				assert content.get_piece_id() in self.ennemy_pieces
-				del self.ennemy_pieces[content.get_piece_id()]
+				#assert isinstance(content, Piece)
+				# A delete_piece arrive before the corresponding set_explored.
+				#assert content.owner != self.player_id
+				#assert content.piece_id in self.enemy_pieces
+				del self.enemy_pieces[content.piece_id]
+		tile.content = None
+		tile.visible = False
 
-	def create_piece(self, piece_id, piece_type, piece_symbol, city_id):
-		assert piece_id not in self.player_pieces
-		assert piece_id not in self.ennemy_pieces
-		assert city_id in self.player_cities
-		piece = Piece(piece_id, piece_type, self.player_id, piece_symbol)
-		piece.set_parent(self.get_player_city(city_id))
+	def create_piece(self, piece_id, piece_type_id, city_id, piece_hits):
+		# Note that the server reuse unused id.
+		# The newly created piece must not already be a player piece (a
+		# delete_piece must have been processed before).
+		#assert piece_id not in self.player_pieces
+		#assert piece_id not in self.enemy_pieces
+		#assert city_id in self.player_cities
+		piece = Piece(piece_id, piece_type_id, self.player_id, piece_hits)
+		piece.parent = self.get_player_city(city_id)
 		self.player_pieces[piece_id] = piece
+		# Reset the production to force a new choice of piece type.
 		self.player_cities[city_id].production = None
 
 	def leave_city(self, piece_id, city_id):
-		assert piece_id in self.player_pieces
-		assert piece_id not in self.ennemy_pieces
-		assert city_id in self.player_cities
+		#assert piece_id in self.player_pieces
+		#assert piece_id not in self.enemy_pieces
+		#assert city_id in self.player_cities
 		piece = self.get_player_piece(piece_id)
-		piece.set_parent(None)
+		piece.parent = None
 
 	def enter_city(self, piece_id, city_id):
-		assert piece_id in self.player_pieces
-		assert piece_id not in self.ennemy_pieces
-		assert city_id in self.player_cities
+		#assert piece_id in self.player_pieces
+		#assert piece_id not in self.enemy_pieces
+		#assert city_id in self.player_cities
 		piece = self.get_player_piece(piece_id)
 		city = self.get_player_city(city_id)
-		assert piece.get_parent() == None
-		piece.set_parent(city)
+		# Before entering in a city, the piece must have leaved its previous location.
+		#assert piece.parent == None
+		piece.parent = city
+
+	def leave_piece(self, piece_id, transport_piece_id):
+		#assert piece_id != transport_piece_id
+		#assert piece_id in self.player_pieces
+		#assert transport_piece_id in self.player_pieces
+		#assert piece_id not in self.enemy_pieces
+		#assert transport_piece_id not in self.enemy_pieces
+		piece = self.get_player_piece(piece_id)
+		transport = self.get_player_piece(transport_piece_id)
+		#assert piece_id in transport.transport
+		#assert piece.parent == transport
+		#assert piece != transport
+		transport.transport.remove(piece_id)
+		piece.parent = None
+
+	def enter_piece(self, piece_id, transport_piece_id):
+		#assert piece_id != transport_piece_id
+		#assert piece_id in self.player_pieces
+		#assert transport_piece_id in self.player_pieces
+		#assert piece_id not in self.enemy_pieces
+		#assert transport_piece_id not in self.enemy_pieces
+		piece = self.get_player_piece(piece_id)
+		transport = self.get_player_piece(transport_piece_id)
+		#assert piece_id not in transport.transport
+		#assert piece.parent == None
+		#assert piece != transport
+		transport.transport.append(piece_id)
+		piece.parent = transport
 
 	def leave_terrain(self, piece_id, location):
-		assert piece_id in self.player_pieces
-		assert piece_id not in self.ennemy_pieces
+		#assert piece_id in self.player_pieces
+		#assert piece_id not in self.enemy_pieces
 		piece = self.get_player_piece(piece_id)
 		tile = self.get_tile(location)
-		assert tile.get_content() == piece
-		assert piece.get_location() == location
-		piece.set_parent(None)
-		tile.set_content(None)
+		#assert tile.content == piece
+		#assert piece.get_location() == location
+		piece.parent = None
+		tile.content = None
 
 	def move(self, piece_id, location):
-		assert piece_id in self.player_pieces
+		# Do nothing. Associated event will change the situation
+		# (set_visible).
+		#assert piece_id in self.player_pieces
 		pass
 
 	def invade_city(self, city_id, location):
 		tile = self.get_tile(location)
-		tile.set_visible()
-		tile.set_city()
-		content = self.get_content(location)
-		assert content != None
-		assert not isinstance(content, Piece)
-		assert not isinstance(content, OwnedCity) or content.get_owner() != self.player_id
-		del self.other_cities[city_id]
+		tile.visible = True
+		#assert tile.content != None
+		#assert not isinstance(tile.content, Piece)
+		# Must not belong to player, otherwise it is not an invasion!
+		#assert not isinstance(tile.content, OwnedCity) or tile.content.owner != self.player_id
+		if city_id in self.free_cities:
+			del self.free_cities[city_id]
+		else:
+			del self.enemy_cities[city_id]
 		city = OwnedCity(city_id, tile, self.player_id)
-		tile.set_content(city)
+		tile.content = city
 		self.player_cities[city_id] = city
 
 	def lose_city(self, city_id):
-		assert city_id in self.player_cities
+		# The city is lost. It is now owned by the enemy.
+		# While waiting to know which enemy now own this city, we make it free.
+		# Normally, one of the next messages is set_visible_owned_city.
+		#assert city_id in self.player_cities
+		#assert city_id not in self.free_cities
 		city = self.player_cities[city_id]
-		parent = city.get_parent()
-		assert isinstance(parent, Tile)
+		parent = city.parent
+		#assert isinstance(parent, Tile)
 		del self.player_cities[city_id]
 		city = City(city_id, parent)
-		parent.set_content(city)
-		self.other_cities[city_id] = city
+		self.free_cities[city_id] = city
+		parent.content = city
 
 	def delete_piece(self, piece_id):
-		assert piece_id in self.player_pieces
 		piece = self.get_player_piece(piece_id)
-		assert piece.get_parent() == None
+		# Before being deleted, the piece must have leaved its previous location.
+		#assert piece.parent == None
 		del self.player_pieces[piece_id]
+
+	def end(self):
+		self.show()

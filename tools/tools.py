@@ -5,3 +5,5 @@ def debug(*args, **kwargs):
 	for a in args:
 		print a,
 	print
+
+warn = debug
