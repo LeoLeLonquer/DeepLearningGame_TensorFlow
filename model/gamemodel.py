@@ -201,7 +201,7 @@ class GameModel(Model):
 								elif isinstance(chunk[q][r].content, ssituation.OwnedCity):
 									chunk[q][r] = 4 + chunk[q][r].content.owner # 4 et 5 !!!
 								else:
-									chunk[q][r] = 6 + chunk[q][r].content.piece_type #+ chunk[q][r].content.owner * len(self.situation.pieces_types)
+									chunk[q][r] = 6 + chunk[q][r].content.piece_type_id + chunk[q][r].content.owner * len(self.situation.piece_types)
 				#print chunk
 				s_t[i] = chunk
 				s_t[i]  = np.stack((s_t[i] , s_t[i] , s_t[i] ,s_t[i] ), axis = 2) #check for last four
