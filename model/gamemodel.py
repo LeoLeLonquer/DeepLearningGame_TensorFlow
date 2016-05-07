@@ -213,18 +213,17 @@ class GameModel(Model):
 					
 						# OR go in the right direction
 					directions = the_situation.directions
-					for n in range(the_situation.pieces_types[piece.piece_type].speed):
-						if not the_situation.is_player_piece(piece_id):
-							break
-						loc = the_situation.get_player_piece_location(piece_id)
-						result = []
-						for dir in range(len(directions)):
-							next_location = loc[0] + directions[dir][0], loc[1] + directions[dir][1]
-							if the_situation.can_player_piece_be_on(piece_id, next_location):
-								result.append(dir)
-						if len(result) > 0:
-							direction = random.choice(result) # choose the one gave by the output_vector x ProbaVector
-							communication.action("move %d %d" % (piece_id, direction))
+					if not the_situation.is_player_piece(piece_id):
+						break
+					loc = the_situation.get_player_piece_location(piece_id)
+					result = []
+					for dir in range(len(directions)):
+						next_location = loc[0] + directions[dir][0], loc[1] + directions[dir][1]
+						if the_situation.can_player_piece_be_on(piece_id, next_location):
+							result.append(dir)
+					if len(result) > 0:
+						direction = random.choice(result) # choose the one gave by the output_vector x ProbaVector
+						communication.action("move %d %d" % (piece_id, direction))
 					
 				## Observe the action and evaluate the result (Q function)
 						## FOR THE MOMENT 
