@@ -31,6 +31,7 @@ GAMMA = 0.99 # decay rate of past observations
 REPLAY_MEMORY = 9000 # number of previous transitions to remember
 BATCH = 32 # size of minibatch
 NB_CHUNK = 25
+
 class GameModel(Model):
 	"""Deep Game Network."""
 	def __init__(self, sess,server_name, server_port):
@@ -166,10 +167,7 @@ class GameModel(Model):
 		action_index = [None]*NB_CHUNK
 		r_t = [None]*NB_CHUNK
 		
-		self.situation.check()
-		print len(self.situation.player_cities)
-		for city_id in self.situation.player_cities:
-			think.choose_relevant_random_production(self.situation, self.communication, city_id)
+		
 		while 1:
 			self.communication.wait()
 
@@ -177,8 +175,12 @@ class GameModel(Model):
 			debug("nb pieces: %d" % len(self.situation.player_pieces))
 
 			self.situation.check()
-			
 			chunks = self.situation.split(10)
+			
+			print len(self.situation.player_cities)			
+			for city_id in self.situation.player_cities:
+				think.choose_relevant_random_production(self.situation, self.communication, city_id)
+			
 				
 			for i in range(len(chunks)):
 				chunk = chunks[i]
@@ -189,7 +191,7 @@ class GameModel(Model):
 							chunk[q][r] = 0
 						else:
 							if chunk[q][r].content == None:
-								if chunk[q][r].terrain == ssituation.GROUND:
+								if chunk[q][r].terrain == ssituation.Situation.GROUND:
 									chunk[q][r] = 1
 								else:
 									chunk[q][r] = 2
