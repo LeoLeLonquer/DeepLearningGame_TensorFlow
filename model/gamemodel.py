@@ -53,7 +53,7 @@ class GameModel(Model):
 		server_fd = server.makefile()
 
 		self.situation = ssituation.Situation()
-		self.parser = pparser.Parser(self.situation)
+		self.parser = pparser.Parser(self.situation,[])
 		self.communication = ccommunication.Communication(self.parser, server, server_fd)
 
 	def build_model(self):
