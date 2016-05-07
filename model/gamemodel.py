@@ -55,6 +55,7 @@ class GameModel(Model):
 		self.situation = ssituation.Situation()
 		self.parser = pparser.Parser(self.situation)
 		self.communication = ccommunication.Communication(self.parser, server, server_fd)
+		assert(self.communication is not None)
 
 	def build_model(self):
 		# network weights
@@ -161,11 +162,11 @@ class GameModel(Model):
 		epsilon = INITIAL_EPSILON
 		
 		# Static allocation to be safe
-		readout = [None]*NB_CHUNK
+		readout_t = [None]*NB_CHUNK
 		s_t = [None]*NB_CHUNK
 		s_t1 = [None]*NB_CHUNK
 		a_t = [[None]*ACTIONS]*NB_CHUNK # vector of vector
-		action_index = [None]*NB_CHUNK
+		action_index = [None]*NB_CHUNK
 		r_t = [None]*NB_CHUNK
 		
 		while 1:
@@ -180,11 +181,11 @@ class GameModel(Model):
 			
 			for i in range(len(chunks)):
 				s_t[i] = chunks[i]
-				#print s_t[i]
+				print s_t[i]
 				#print len(s_t[i])
 				
 				#evaluate with current model 
-				readout_t[i] = readout.eval(feed_dict = {s : [s_t[i]]})[0]
+				readout_t[i] = self.readout.eval(feed_dict = {self.input_layer : [s_t[i]]})[0]
 	
 				a_t[i] = np.zeros([ACTIONS])
 				#choose an action for every chunk
@@ -227,7 +228,6 @@ class GameModel(Model):
 						communication.action("move %d %d" % (piece_id, direction))
 					
 				## Observe the action and evaluate the result (Q function)
-						## FOR THE MOMENT 
 					# check only if alive				
 				if not the_situation.is_player_piece(piece_id):
 					r_t[i] = -1
@@ -258,19 +258,19 @@ class GameModel(Model):
 					s_j1_batch = [d[3] for d in minibatch]
 
 					y_batch = []
-					readout_j1_batch = readout.eval(feed_dict = {s : s_j1_batch})
+					readout_j1_batch = readout.eval(feed_dict = {self.input_layer  : s_j1_batch})
 					for i in range(0, len(minibatch)):
 					# if terminal only equals reward
-					if minibatch[i][4]:
-							y_batch.append(r_batch[i])
-					else:
-							y_batch.append(r_batch[i] + GAMMA * np.max(readout_j1_batch[i]))
+						if minibatch[i][4]:
+								y_batch.append(r_batch[i])
+						else:
+								y_batch.append(r_batch[i] + GAMMA * np.max(readout_j1_batch[i]))
 
-					# perform gradient step
-					train_step.run(feed_dict = {
-						y : y_batch,
-						a : a_batch,
-						s : s_j_batch})
+						# perform gradient step
+						train_step.run(feed_dict = {
+							y : y_batch,
+							a : a_batch,
+							self.input_layer : s_j_batch})
 
 			# update the old values
 			for i in range(len(chunks)):
