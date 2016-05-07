@@ -201,7 +201,7 @@ class GameModel(Model):
 								elif isinstance(chunk[q][r].content, ssituation.OwnedCity):
 									chunk[q][r] = 4 + chunk[q][r].content.owner # 4 et 5 !!!
 								else:
-									chunk[q][r] = 6 + chunk[q][r].content.piece_type + chunk[q][r].content.owner * len(self.situation.pieces_types)
+									chunk[q][r] = 6 + chunk[q][r].content.piece_type #+ chunk[q][r].content.owner * len(self.situation.pieces_types)
 				#print chunk
 				s_t[i] = chunk
 				s_t[i]  = np.stack((s_t[i] , s_t[i] , s_t[i] ,s_t[i] ), axis = 2) #check for last four
@@ -226,8 +226,10 @@ class GameModel(Model):
 			piece_ids = self.situation.player_pieces.keys()
 			print len(piece_ids)
 			for piece_id in piece_ids:
-				#while can go further 
-				for n in range(self.situation.pieces_types[piece.piece_type].speed):
+				#while can go further
+				piece = self.situation.player_pieces[piece_id]
+				depth = self.situation.piece_types[piece.piece_type_id].speed
+				while depth > 0 and self.situation.is_player_piece(piece_id):
 					## Get the output vector from the right chunk and multiply it to ProbaVector
 						# for ex: Water = 0 - City = 0.8 - T1 = 0.3 etc..
 				
@@ -236,10 +238,10 @@ class GameModel(Model):
 						#self.play_random_action(piece_id)			
 					
 						# OR go in the right direction
-					directions = self.situation.directions
+					directions = algos.directions
 					if not self.situation.is_player_piece(piece_id):
 						break
-					loc = self.situation.get_player_piece_location(piece_id)
+					loc = piece.get_location()
 					result = []
 					for dir in range(len(directions)):
 						next_location = loc[0] + directions[dir][0], loc[1] + directions[dir][1]
@@ -247,7 +249,7 @@ class GameModel(Model):
 							result.append(dir)
 					if len(result) > 0:
 						direction = random.choice(result) # choose the one gave by the output_vector x ProbaVector
-						communication.action("move %d %d" % (piece_id, direction))
+						self.communication.action("move %d %d" % (piece_id, direction))
 					
 				## Observe the action and evaluate the result (Q function)
 					# check only if alive				
