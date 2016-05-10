@@ -27,7 +27,7 @@ while test $NB -gt 0; do
 	sleep 1
 	python ./empire-captain/ai${IA1}.py localhost ${SPORT} > out_P1 2>&1 &
 	PPID1=$!
-	python ./DeepLearningGame_TensorFlow/main.py localhost ${SPORT} &
+	python ./DeepLearningGame_TensorFlow/main.py localhost ${SPORT} > out_P2&
 	PPID2=$!
 
 	PIDS="${SPID} ${PPID1} ${PPID2}"
@@ -54,8 +54,9 @@ while test $NB -gt 0; do
 			exit
 		fi
 	fi
-	echo "END PART $PART : $NBWIN0 $NBWIN1"
-	echo "Player0 : $NBWIN0" > ./resultat
-	echo "Player1 : $NBWIN1" >> ./resultat
+	echo "END PART $PART : $NBWIN0 $NBWIN1" >> ./tempo_result
 done
 echo $NBWIN0 $NBWIN1
+echo "END PART $PART : $NBWIN0 $NBWIN1"
+echo "Player0 : $NBWIN0" > ./resultat
+echo "Player1 : $NBWIN1" >> ./resultat
