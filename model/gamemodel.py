@@ -118,8 +118,7 @@ class GameModel(Model):
 		train_step = tf.train.AdamOptimizer(learning_rate).minimize(cost)		
 		
 		# store the previous observations in replay memory
-    	D = deque()
-	
+		D = deque()
 		# initialize all variables
 		tf.initialize_all_variables().run()
 		
