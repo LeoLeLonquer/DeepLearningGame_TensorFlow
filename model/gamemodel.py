@@ -26,13 +26,17 @@ FINAL_EPSILON = 0.05 # final value of epsilon
 INITIAL_EPSILON = 1.0 # starting value of epsilon
 ACTIONS = 7 # number of valid actions
 OBSERVE = 50.0 # timesteps to observe before training
+#TODO : use a file to store nb of previous actions 
 EXPLORE = 500.0 # frames over which to anneal epsilon
 GAMMA = 0.99 # decay rate of past observations
-REPLAY_MEMORY = 300 # number of previous transitions to remember
-BATCH = 50 # size of minibatch
+REPLAY_MEMORY = 100 # number of previous transitions to remember
+BATCH = 40 # size of minibatch
 NB_CHUNK = 25
 size = 10 #split(size)
 
+CITY = 0
+ATTACK = 1 
+ELSE = 2
 class GameModel(Model):
 	"""Deep Game Network."""
 	def __init__(self, sess,server_name, server_port):
@@ -87,32 +91,6 @@ class GameModel(Model):
 		
 		# readout layer
 		self.readout = tf.matmul(self.h_fc1, W_fc2) + b_fc2
-		
-	def play_random_action(self, piece_id):
-		piece = self.situation.player_pieces[piece_id]
-		loc = self.situation.get_player_piece_location(piece_id)
-		depth = self.situation.pieces_types[piece.piece_type].speed
-		def crossable(a):
-			qa, ra = a
-			return self.situation.is_in_map((qa, ra)) and \
-					self.situation.can_player_piece_be_on(piece_id, (qa, ra)) and \
-					self.situation.is_tile_none((qa, ra))
-		def neighbors(a):
-			qa, ra = a
-			result = []
-			for direction in algos.directions:
-				qd, rd = direction
-				qb, rb = qa + qd, ra + rd
-				if self.situation.is_in_map((qb, rb)) and self.situation.can_player_piece_be_on(piece_id, (qb, rb)):
-					result.append( (qb, rb) )
-			return result
-		def cost(x, y):
-			return 1
-		heuristic = self.situation.get_tiles_distance
-		destinations, came_from = algos.breadth_first_search_all(loc, depth, neighbors, cost, heuristic, crossable)
-		if len(destinations) > 0:
-			dest = random.choice(destinations)
-			self.communication.action("moves %d %d %d" % (piece_id, dest[0], dest[1]))
 	
 	def play(self, learning_rate=0.001,
             checkpoint_dir="checkpoint",load=0):
@@ -140,10 +118,7 @@ class GameModel(Model):
 		train_step = tf.train.AdamOptimizer(learning_rate).minimize(cost)		
 		
 		# store the previous observations in replay memory
-    		D = deque()
-    
-    		# get the first state by doing nothing and preprocess the image to 80x80x4
-		do_nothing = np.zeros(ACTIONS)
+    	D = deque()
 	
 		# initialize all variables
 		tf.initialize_all_variables().run()
@@ -157,9 +132,10 @@ class GameModel(Model):
 		start_time = time.time()
 
 		t = 0
+		#TODO : take epsilon from file
 		epsilon = INITIAL_EPSILON
 		
-		# Static allocation to be safe
+		#Static allocation to be safe
 		readout_t = [None]*NB_CHUNK
 		s_t = [None]*NB_CHUNK
 		s_t1 = [None]*NB_CHUNK
@@ -169,15 +145,13 @@ class GameModel(Model):
 		
 		while 1:
 			self.communication.wait()
-
-			#debug("nb cities: %d" % len(self.situation.player_cities))
-			#debug("nb pieces: %d" % len(self.situation.player_pieces))
-
+			
 			self.situation.check()
 			chunks = self.situation.split(10)
+			
+			#TODO : maybe select good troops ->
 			for city_id in self.situation.player_cities:
 				think.choose_relevant_random_production(self.situation, self.communication, city_id)
-			
 				
 			for i in range(len(chunks)):
 				chunk = chunks[i]
@@ -200,21 +174,19 @@ class GameModel(Model):
 								else:
 									chunk[q][r] = 6 + chunk[q][r].content.piece_type_id + chunk[q][r].content.owner * len(self.situation.piece_types)
 				#print chunk
-				s_t[i] = chunk
-				s_t[i]  = np.stack((s_t[i] , s_t[i] , s_t[i] ,s_t[i] ), axis = 2) #check for last four
+				s_t[i] = chunk #TODO : update ?
+				s_t[i]  = np.stack((s_t[i] , s_t[i] , s_t[i] ,s_t[i] ), axis = 2)
 				#evaluate with current model 
 				readout_t[i] = self.readout.eval(feed_dict = {self.input_layer : [s_t[i]]})[0]
-				a_t[i] = np.zeros([ACTIONS],dtype=float)
 			
 			# scale down epsilon
 			if epsilon > FINAL_EPSILON:
 				epsilon -= (INITIAL_EPSILON - FINAL_EPSILON) / EXPLORE
 		
-		
 			# play actions
 			piece_ids = self.situation.player_pieces.keys()
 			if t % 20 == 0:
-				print("Nb piece : {}".format(len(piece_ids)))
+				print("Nb piece [{}] : {}".format(t,len(piece_ids)))
 			for piece_id in piece_ids:
 				#while can go further
 				piece = self.situation.player_pieces[piece_id]
@@ -234,6 +206,7 @@ class GameModel(Model):
 							# keep coef and check the content of the tile
 							# next_location is next(x,y)
 							result.append(dir)
+							action_done = ELSE #at startup
 							if self.situation.is_in_map(next_location):
 								if self.situation.is_tile_none(next_location):
 									if self.situation.get_terrain(next_location) == ssituation.Situation.GROUND or self.situation.get_terrain(next_location) == ssituation.Situation.WATER or self.situation.is_tile_player_city(next_location):
@@ -241,8 +214,10 @@ class GameModel(Model):
 								else:
 									if self.situation.is_tile_free_city(next_location) or self.situation.is_tile_enemy_city(next_location):
 										readout_t[i][dir]= 1 # we take it
+										action_done = CITY
 									elif self.situation.is_tile_enemy_piece(next_location):
 										readout_t[i][dir]=float(readout_t[i][dir])*0.3 # TODO update with kind of troops
+										action_done = ATTACK
 									elif self.situation.is_tile_player_piece(next_location) :
 										readout_t[i][dir]=0
 									else:
@@ -263,9 +238,19 @@ class GameModel(Model):
 				## Observe the action and evaluate the result (Q function)
 					# check only if alive				
 				if not self.situation.is_player_piece(piece_id):
-					r_t[i] = -1
+					if action_done == ATTACK:
+						r_t[i] = -15 #not good to die during attack
+					elif action_done == CITY: 
+						r_t[i] = -1 #dying while taking a city is not really bad
+					else:
+						r_t[i] = -5 #dying by being attacked is bad 
 				else:
-					r_t[i] = 1
+					if action_done == ATTACK:
+						r_t[i] = 15 #winning an attack
+					elif action_done == CITY: 
+						r_t[i] = 100 #taking a city
+					else:
+						r_t[i] = 1 #being alive 
 
 				self.situation.check()
 				chunks = self.situation.split(10)
@@ -284,7 +269,11 @@ class GameModel(Model):
 				if BATCH > len(D):
 					minibatch = random.sample(D, BATCH)
 				else : 
-					minibatch = random.sample(D,len(D)-1)
+					try:
+						minibatch = random.sample(D,len(D)-1)
+					except ValueError:
+						print("ValueError : sample population")
+						minibatch = random.sample(D,1)
 				# get the batch variables
 				s_j_batch = [d[0] for d in minibatch]
 				a_batch = [d[1] for d in minibatch]
@@ -305,8 +294,6 @@ class GameModel(Model):
 					a : a_batch,
 					self.input_layer : s_j_batch})
 			# update the old values
-			#for i in range(len(chunks)):
-			#	s_t[i] = s_t1[i]
 			self.communication.end_turn()
 			t += 1
 			# Save checkpoint each 100 steps
