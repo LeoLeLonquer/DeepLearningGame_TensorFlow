@@ -80,6 +80,7 @@ class Situation(handler.Handler):
 
 	def get_enemy_cities(self):
 		return self.enemy_cities.values()
+		
 	def split(self, size):
  		assert self.width % size == 0
  		assert self.height % size == 0
@@ -89,7 +90,15 @@ class Situation(handler.Handler):
  				chunk = [ self.view[qi * size + q][(ri * size):((ri + 1) * size)] for q in range(size) ]
  				result.append(chunk)
  		return result
- 		
+ 	
+ 	def split_int(self, size,piece_id):
+ 		assert self.width % size == 0
+ 		assert self.height % size == 0
+		loc = self.player_pieces[piece_id].get_location()
+ 		result = (loc[0] // size) + (loc[1] // size)*(self.width//size)
+ 		assert result <  ((self.width // size) *  (self.height // size))
+ 		return result
+ 	
 	def check(self):
 		err = False
 		# Check enemy pieces.

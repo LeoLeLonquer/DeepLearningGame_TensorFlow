@@ -25,12 +25,13 @@ debug = tools.debug
 FINAL_EPSILON = 0.05 # final value of epsilon
 INITIAL_EPSILON = 1.0 # starting value of epsilon
 ACTIONS = 7 # number of valid actions
-OBSERVE = 50. # timesteps to observe before training
-EXPLORE = 20. # frames over which to anneal epsilon
+OBSERVE = 50.0 # timesteps to observe before training
+EXPLORE = 10000.0 # frames over which to anneal epsilon
 GAMMA = 0.99 # decay rate of past observations
 REPLAY_MEMORY = 9000 # number of previous transitions to remember
-BATCH = 32 # size of minibatch
+BATCH = 10 # size of minibatch
 NB_CHUNK = 25
+size = 10 #split(size)
 
 class GameModel(Model):
 	"""Deep Game Network."""
@@ -143,7 +144,6 @@ class GameModel(Model):
     
     		# get the first state by doing nothing and preprocess the image to 80x80x4
 		do_nothing = np.zeros(ACTIONS)
-		do_nothing[0] = 1  # TODO : check if 0 is do_nothing
 	
 		# initialize all variables
 		tf.initialize_all_variables().run()
@@ -163,21 +163,18 @@ class GameModel(Model):
 		readout_t = [None]*NB_CHUNK
 		s_t = [None]*NB_CHUNK
 		s_t1 = [None]*NB_CHUNK
-		a_t = [[None]*ACTIONS]*NB_CHUNK # vector of vector
-		action_index = [None]*NB_CHUNK
+		a_t = [[None]*ACTIONS]*NB_CHUNK # vector of vector which contain the executed action
 		r_t = [None]*NB_CHUNK
 		
 		
 		while 1:
 			self.communication.wait()
 
-			debug("nb cities: %d" % len(self.situation.player_cities))
-			debug("nb pieces: %d" % len(self.situation.player_pieces))
+			#debug("nb cities: %d" % len(self.situation.player_cities))
+			#debug("nb pieces: %d" % len(self.situation.player_pieces))
 
 			self.situation.check()
 			chunks = self.situation.split(10)
-			
-			print len(self.situation.player_cities)			
 			for city_id in self.situation.player_cities:
 				think.choose_relevant_random_production(self.situation, self.communication, city_id)
 			
@@ -207,15 +204,7 @@ class GameModel(Model):
 				s_t[i]  = np.stack((s_t[i] , s_t[i] , s_t[i] ,s_t[i] ), axis = 2) #check for last four
 				#evaluate with current model 
 				readout_t[i] = self.readout.eval(feed_dict = {self.input_layer : [s_t[i]]})[0]
-	
-				a_t[i] = np.zeros([ACTIONS])
-				#choose an action for every chunk
-				if random.random() <= epsilon or t <= OBSERVE:
-					a_t[i][random.randrange(ACTIONS)] = 1
-				else:
-					# TODO : instead of taking the best, apply ponderation vector
-				    	action_index = np.argmax(readout_t[i]) #this gets only the best action_index
-				    	a_t[i][action_index] = 1
+				a_t[i] = np.zeros([ACTIONS],dtype=float)
 			
 			# scale down epsilon
 			if epsilon > FINAL_EPSILON:
@@ -224,32 +213,52 @@ class GameModel(Model):
 		
 			# play actions
 			piece_ids = self.situation.player_pieces.keys()
-			print len(piece_ids)
+			if t % 20 == 0:
+				print("Nb piece : {}".format(len(piece_ids)))
 			for piece_id in piece_ids:
 				#while can go further
 				piece = self.situation.player_pieces[piece_id]
 				depth = self.situation.piece_types[piece.piece_type_id].speed
+				#find good chunk
+				i = self.situation.split_int(size,piece_id)
 				while depth > 0 and self.situation.is_player_piece(piece_id):
-					## Get the output vector from the right chunk and multiply it to ProbaVector
-						# for ex: Water = 0 - City = 0.8 - T1 = 0.3 etc..
-				
-					# Send the action to the server
-						# EITHER play the random action
-						#self.play_random_action(piece_id)			
-					
-						# OR go in the right direction
+					# check in the vector the best choice
 					directions = algos.directions
 					if not self.situation.is_player_piece(piece_id):
 						break
 					loc = piece.get_location()
 					result = []
 					for dir in range(len(directions)):
-						next_location = loc[0] + directions[dir][0], loc[1] + directions[dir][1]
+						next_location = loc[0] + directions[dir][0], loc[1] + directions[dir][1] # x , y
 						if self.situation.can_player_piece_be_on(piece_id, next_location):
+							# keep coef and check the content of the tile
+							# next_location is next(x,y)
 							result.append(dir)
-					if len(result) > 0:
-						direction = random.choice(result) # choose the one gave by the output_vector x ProbaVector
-						self.communication.action("move %d %d" % (piece_id, direction))
+							if self.situation.is_in_map(next_location):
+								if self.situation.is_tile_none(next_location):
+									if self.situation.get_terrain(next_location) == ssituation.Situation.GROUND or self.situation.get_terrain(next_location) == ssituation.Situation.WATER or self.situation.is_tile_player_city(next_location):
+										readout_t[i][dir]=float(readout_t[i][dir])*0.5
+								else:
+									if self.situation.is_tile_free_city(next_location) or self.situation.is_tile_enemy_city(next_location):
+										readout_t[i][dir]= 1 # we take it
+									elif self.situation.is_tile_enemy_piece(next_location):
+										readout_t[i][dir]=float(readout_t[i][dir])*0.3 # TODO update with kind of troops
+									elif self.situation.is_tile_player_piece(next_location) :
+										readout_t[i][dir]=0
+									else:
+										assert("Should not pass here.");
+						else:
+							# can't play this directions
+							readout_t[i][dir] = 0
+					if len(result)>0:		
+						if random.random() <= epsilon or t <= OBSERVE:
+							direction = random.choice(result) # choose the one gave by the output_vector x ProbaVector
+							self.communication.action("move %d %d" % (piece_id, direction))
+						else:
+						    	action_index = np.argmax(readout_t[i]) #this gets only the best action_index
+						    	if action_index != 6:
+							    	self.communication.action("move %d %d" % (piece_id, action_index))
+					depth = depth - 1
 					
 				## Observe the action and evaluate the result (Q function)
 					# check only if alive				
@@ -264,51 +273,44 @@ class GameModel(Model):
 				terminal = 0
 				
 				#state result
-				for i in range(len(chunks)):
-					s_t1[i] = s_t[i]
+				for j in range(len(chunks)):
+					s_t1[j] = s_t[j]
 				
 				# store the transition in D
-				D.append((s_t[i], a_t[i], r_t, s_t1, terminal))
+				D.append((s_t[i], a_t[i], r_t[i], s_t1[i], terminal))
 
-				if t> OBSERVE:
-					# sample a minibatch to train on
-					minibatch = random.sample(D, BATCH)
-
-					# get the batch variables
-					s_j_batch = [d[0] for d in minibatch]
-					a_batch = [d[1] for d in minibatch]
-					r_batch = [d[2] for d in minibatch]
-					s_j1_batch = [d[3] for d in minibatch]
-
-					y_batch = []
-					readout_j1_batch = readout.eval(feed_dict = {self.input_layer  : s_j1_batch})
-					for i in range(0, len(minibatch)):
-					# if terminal only equals reward
-						if minibatch[i][4]:
-								y_batch.append(r_batch[i])
-						else:
-								y_batch.append(r_batch[i] + GAMMA * np.max(readout_j1_batch[i]))
-
-						# perform gradient step
-						train_step.run(feed_dict = {
-							y : y_batch,
-							a : a_batch,
-							self.input_layer : s_j_batch})
+			if t> OBSERVE:
+				# sample a minibatch to train on
+				minibatch = random.sample(D, BATCH)
+				# get the batch variables
+				s_j_batch = [d[0] for d in minibatch]
+				a_batch = [d[1] for d in minibatch]
+				r_batch = [d[2] for d in minibatch]
+				s_j1_batch = [d[3] for d in minibatch]
+				
+				y_batch = []
+				readout_j1_batch = self.readout.eval(feed_dict = {self.input_layer : s_j1_batch})
+				for i in range(0, len(minibatch)):
+				# if terminal only equals reward
+					if minibatch[i][4]:
+						y_batch.append(r_batch[i])
+					else:
+						y_batch.append(r_batch[i] + GAMMA * float(np.max(readout_j1_batch[i])))
+						
+				train_step.run(feed_dict = {
+					y : y_batch,
+					a : a_batch,
+					self.input_layer : s_j_batch})
 			self.communication.end_turn()
 			# update the old values
 			for i in range(len(chunks)):
 				s_t[i] = s_t1[i]
 			t += 1
-			
-			# Show situation 
-			if t % 10 == 0:
-				print t
-				#situation.show()
 			# Save checkpoint each 300 steps
 			if t != 0 and t % 100 == 0:
 				self.save(checkpoint_dir, step)
 			# Show current progress
 			step = sess.run(self.step)
-			#if t % 100 == 1:
-			#	print("Epoch: [%2d] time: %4.4f, loss: %.8f" % (step, time.time() - start_time, cost))
+			if t % 100 == 1:
+				print("Epoch: [%2d] time: %4.4f, epsilon: %.8f" % (t, time.time() - start_time, epsilon))
 			
