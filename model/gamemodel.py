@@ -26,10 +26,10 @@ FINAL_EPSILON = 0.05 # final value of epsilon
 INITIAL_EPSILON = 1.0 # starting value of epsilon
 ACTIONS = 7 # number of valid actions
 OBSERVE = 50.0 # timesteps to observe before training
-EXPLORE = 1000.0 # frames over which to anneal epsilon
+EXPLORE = 500.0 # frames over which to anneal epsilon
 GAMMA = 0.99 # decay rate of past observations
-REPLAY_MEMORY = 9000 # number of previous transitions to remember
-BATCH = 10 # size of minibatch
+REPLAY_MEMORY = 300 # number of previous transitions to remember
+BATCH = 50 # size of minibatch
 NB_CHUNK = 25
 size = 10 #split(size)
 
@@ -284,7 +284,7 @@ class GameModel(Model):
 				if BATCH > len(D):
 					minibatch = random.sample(D, BATCH)
 				else : 
-					minibatch = random.sample(D,len(D))
+					minibatch = random.sample(D,len(D)-1)
 				# get the batch variables
 				s_j_batch = [d[0] for d in minibatch]
 				a_batch = [d[1] for d in minibatch]
@@ -304,16 +304,15 @@ class GameModel(Model):
 					y : y_batch,
 					a : a_batch,
 					self.input_layer : s_j_batch})
-			self.communication.end_turn()
 			# update the old values
-			for i in range(len(chunks)):
-				s_t[i] = s_t1[i]
+			#for i in range(len(chunks)):
+			#	s_t[i] = s_t1[i]
+			self.communication.end_turn()
 			t += 1
-			# Save checkpoint each 300 steps
+			# Save checkpoint each 100 steps
 			if t != 0 and t % 100 == 0:
 				self.save(checkpoint_dir, step)
 			# Show current progress
 			step = sess.run(self.step)
 			if t % 100 == 1:
 				print("Epoch: [%2d], player: %d time: %4.4f, epsilon: %.8f" % (t,self.situation.player_id, time.time() - start_time, epsilon))
-			
