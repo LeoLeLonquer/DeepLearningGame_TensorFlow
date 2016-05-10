@@ -315,5 +315,5 @@ class GameModel(Model):
 			# Show current progress
 			step = sess.run(self.step)
 			if t % 100 == 1:
-				print("Epoch: [%2d] time: %4.4f, epsilon: %.8f" % (t, time.time() - start_time, epsilon))
+				print("Epoch: [%2d], player: %d time: %4.4f, epsilon: %.8f" % (t,self.situation.player_id, time.time() - start_time, epsilon))
 			
