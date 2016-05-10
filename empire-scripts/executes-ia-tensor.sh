@@ -15,19 +15,19 @@ make_empire
 NBWIN0=0
 NBWIN1=0
 
-NB=2
+NB=25
 PART=0
 while test $NB -gt 0; do
 	echo "Partie $PART démarrée"
 	NB=`expr $NB - 1`
-	PART=`expr $PART +1`
+	PART=`expr $PART + 1`
 	# Demarrage des programmes.
 	./empire-server/Main.native -sport ${SPORT}  > out_S 2>&1 & 
 	SPID=$!
 	sleep 1
 	python ./empire-captain/ai${IA1}.py localhost ${SPORT} > out_P1 2>&1 &
 	PPID1=$!
-	python ./DeepLearningGame_TensorFlow/main.py localhost ${SPORT} > out_P2 2>&1 &
+	python ./DeepLearningGame_TensorFlow/main.py localhost ${SPORT} &
 	PPID2=$!
 
 	PIDS="${SPID} ${PPID1} ${PPID2}"
@@ -55,5 +55,7 @@ while test $NB -gt 0; do
 		fi
 	fi
 	echo "END PART $PART : $NBWIN0 $NBWIN1"
+	echo "Player0 : $NBWIN0" > ./resultat
+	echo "Player1 : $NBWIN1" >> ./resultat
 done
 echo $NBWIN0 $NBWIN1
