@@ -19,7 +19,6 @@ if len(sys.argv) != 3:
 	sys.exit(1)
 		
 def main(_):
-	print "Cest le main"
 	pp.pprint(flags.FLAGS.__flags)
 
 	if not os.path.exists(FLAGS.checkpoint_dir):

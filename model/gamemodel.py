@@ -26,7 +26,7 @@ FINAL_EPSILON = 0.05 # final value of epsilon
 INITIAL_EPSILON = 1.0 # starting value of epsilon
 ACTIONS = 7 # number of valid actions
 OBSERVE = 50.0 # timesteps to observe before training
-EXPLORE = 10000.0 # frames over which to anneal epsilon
+EXPLORE = 1000.0 # frames over which to anneal epsilon
 GAMMA = 0.99 # decay rate of past observations
 REPLAY_MEMORY = 9000 # number of previous transitions to remember
 BATCH = 10 # size of minibatch
@@ -281,7 +281,10 @@ class GameModel(Model):
 
 			if t> OBSERVE:
 				# sample a minibatch to train on
-				minibatch = random.sample(D, BATCH)
+				if BATCH > len(D):
+					minibatch = random.sample(D, BATCH)
+				else : 
+					minibatch = random.sample(D,len(D))
 				# get the batch variables
 				s_j_batch = [d[0] for d in minibatch]
 				a_batch = [d[1] for d in minibatch]
