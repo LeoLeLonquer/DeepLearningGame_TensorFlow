@@ -20,7 +20,7 @@ PART=0
 while test $NB -gt 0; do
 	echo "Partie $PART démarrée"
 	NB=`expr $NB - 1`
-	PART=`expr $PART +1`
+	PART=`expr $PART + 1`
 	# Demarrage des programmes.
 	./empire-server/Main.native -sport ${SPORT}  > out_S 2>&1 & 
 	SPID=$!
