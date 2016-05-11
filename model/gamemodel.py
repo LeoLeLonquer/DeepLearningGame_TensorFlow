@@ -236,7 +236,7 @@ class GameModel(Model):
 							elif self.situation.is_tile_player_piece(next_location):
 								readout_t[i][dir]=0
 							else:
-								print("Content : {} - us : {}".format(self.situation.get_content(next_location).owner,self.situation.player_id))
+								print("Content : {} - us : {}".format(self.situation.get_content(next_location),self.situation.player_id))
 								assert(False);
 						else:
 							# can't play this directions
