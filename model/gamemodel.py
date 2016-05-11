@@ -27,7 +27,7 @@ FINAL_EPSILON = 0.05 # final value of epsilon
 INITIAL_EPSILON = 1.0 # starting value of epsilon
 ACTIONS = 7 # number of valid actions
 OBSERVE = 50 # timesteps to observe before training
-EXPLORE = 50000 # frames over which to anneal epsilon
+EXPLORE = 1000 # frames over which to anneal epsilon
 GAMMA = 0.99 # decay rate of past observations
 REPLAY_MEMORY = 100 # number of previous transitions to remember
 BATCH = 40 # size of minibatch
@@ -148,7 +148,7 @@ class GameModel(Model):
 		
 		start_time = time.time()
 
-		t = self.t
+		t = int(self.t)
 		old_t = t
 		
 		epsilon = INITIAL_EPSILON
