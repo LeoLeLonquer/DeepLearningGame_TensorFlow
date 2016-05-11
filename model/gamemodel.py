@@ -150,8 +150,11 @@ class GameModel(Model):
 
 		t = self.t
 		old_t = t
-		#TODO : take epsilon from file
+		
 		epsilon = INITIAL_EPSILON
+		for x in range(0,t):
+			if epsilon > FINAL_EPSILON:
+				epsilon -= (INITIAL_EPSILON - FINAL_EPSILON) / EXPLORE
 		
 		#Static allocation to be safe
 		readout_t = [None]*NB_CHUNK
@@ -238,7 +241,6 @@ class GameModel(Model):
 									elif self.situation.is_tile_player_piece(next_location):
 										readout_t[i][dir]=0
 									else:
-										print("Should not pass here.")
 										print("Content : {} - us : {}".format(self.situation.get_content(next_location).owner,self.situation.player_id))
 										assert(False);
 						else:
