@@ -48,7 +48,7 @@ class GameModel(Model):
 			f = open('t.pckl','r') #read
 			self.t = float(pickle.load(f))
 		else:
-			f = open('t.pckl','r+') #write
+			f = open('t.pckl','w') #write
 			self.t = 0
 			pickle.dump(self.t, f)
 		f.close()
@@ -57,7 +57,7 @@ class GameModel(Model):
 			f = open('d.pckl','r')
 			self.d = pickle.load(f)
 		else:
-			f = open('d.pckl','r+')
+			f = open('d.pckl','w')
 			self.d = deque()
 			pickle.dump(self.d, f)
 		f.close()
