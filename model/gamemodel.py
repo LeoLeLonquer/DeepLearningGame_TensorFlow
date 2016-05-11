@@ -139,7 +139,7 @@ class GameModel(Model):
 			pickle.dump(t, f)
 		f.close()
 		#Get minibatch
-		if os.path.exists('d.tckl'):
+		if os.path.exists('d.pckl'):
 			d = open('d.pckl','rb')
 			print("Load d.")
 			D = pickle.load(d)
