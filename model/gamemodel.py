@@ -226,6 +226,7 @@ class GameModel(Model):
 							# next_location is next(x,y)
 							result.append(dir)
 							action_done = ELSE #at startup
+							print("Readout_t : {}".format(readout_t[i]))
 							if self.situation.is_in_map(next_location):
 								if self.situation.is_tile_none(next_location):
 									if self.situation.get_terrain(next_location) == ssituation.Situation.GROUND or self.situation.get_terrain(next_location) == ssituation.Situation.WATER or self.situation.is_tile_player_city(next_location):
