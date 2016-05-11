@@ -31,7 +31,7 @@ EXPLORE = 1000 # frames over which to anneal epsilon
 GAMMA = 0.99 # decay rate of past observations
 REPLAY_MEMORY = 100 # number of previous transitions to remember
 BATCH = 40 # size of minibatch
-NB_CHUNK = 25
+NB_CHUNK = 16
 size = 10 #split(size)
 
 CITY = 0
