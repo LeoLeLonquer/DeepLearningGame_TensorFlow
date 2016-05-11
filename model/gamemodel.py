@@ -240,7 +240,7 @@ class GameModel(Model):
 										readout_t[i][dir]=0
 									else:
 										print("Should not pass here.")
-										print("Content : {}".format(self.situation.get_content(next_location))
+										print("Content : {}".format(self.situation.get_content(next_location)))
 										assert(False);
 						else:
 							# can't play this directions
