@@ -230,7 +230,7 @@ class GameModel(Model):
 									elif self.situation.is_tile_player_piece(next_location) :
 										readout_t[i][dir]=0
 									else:
-										print("Should not pass here.").
+										print("Should not pass here.")
 										assert(False);
 						else:
 							# can't play this directions
