@@ -152,7 +152,7 @@ class GameModel(Model):
 		old_t = t
 		
 		epsilon = INITIAL_EPSILON
-		for x in range(0,t):
+		for x in range(t):
 			if epsilon > FINAL_EPSILON:
 				epsilon -= (INITIAL_EPSILON - FINAL_EPSILON) / EXPLORE
 		
@@ -196,7 +196,7 @@ class GameModel(Model):
 									chunk[q][r] = 6 + chunk[q][r].content.piece_type_id + chunk[q][r].content.owner * len(self.situation.piece_types)
 				#print chunk
 				s_t[i] = chunk #TODO : update ?
-				s_t[i]  = np.stack((s_t[i] , s_t[i] , s_t[i] ,s_t[i] ), axis = 2)
+				s_t[i] = np.stack((s_t[i] , s_t[i] , s_t[i] ,s_t[i] ), axis = 2)
 				#evaluate with current model 
 				readout_t[i] = self.readout.eval(feed_dict = {self.input_layer : [s_t[i]]})[0]
 			
@@ -255,6 +255,7 @@ class GameModel(Model):
 							else:
 								action_index = np.nanargmax(readout_t[i]) #this gets only the best action_index
 								a_t[i] = readout_t[i]
+								print("Action[{}] : {}".format(action_index,a_t[i]))
 								if action_index != 6:
 									self.communication.action("move %d %d" % (piece_id, action_index))
 					depth = depth - 1
