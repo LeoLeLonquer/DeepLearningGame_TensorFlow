@@ -217,8 +217,6 @@ class GameModel(Model):
 				while depth > 0 and self.situation.is_player_piece(piece_id):
 					# check in the vector the best choice
 					directions = algos.directions
-					if not self.situation.is_player_piece(piece_id):
-						break
 					loc = piece.get_location()
 					result = []
 					for dir in range(len(directions)):
@@ -251,6 +249,7 @@ class GameModel(Model):
 								direction = random.choice(result) # choose the one gave by the output_vector x ProbaVector
 								a_t[i] = np.zeros(ACTIONS)
 								a_t[i][direction] = 1
+								print("Result : {}".format(result))
 								print("Action[{}] : {}".format(direction,a_t[i]))
 								self.communication.action("move %d %d" % (piece_id, direction))
 							else:
