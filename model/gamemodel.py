@@ -44,18 +44,20 @@ class GameModel(Model):
 		self.build_model()
 		self.init_server(server_name,server_port)
 		#GET t
-		f = open('t.pckl','r+')
-		if os.path.exists(f):
+		if os.path.exists('t.pckl'):
+			f = open('t.pckl','r') #read
 			self.t = float(pickle.load(f))
 		else:
+			f = open('t.pckl','r+') #write
 			self.t = 0
 			pickle.dump(self.t, f)
 		f.close()
 		#Get minibatch
-		f = open('d.pckl','r+')
-		if os.path.exists(f):
+		if os.path.exists('d.tckl'):
+			f = open('d.pckl','r')
 			self.d = pickle.load(f)
 		else:
+			f = open('d.pckl','r+')
 			self.d = deque()
 			pickle.dump(self.d, f)
 		f.close()
