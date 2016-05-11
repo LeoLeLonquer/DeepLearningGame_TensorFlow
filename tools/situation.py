@@ -322,8 +322,9 @@ class Situation(handler.Handler):
 		if content.owner != self.player_id:
 			return True
 		# The piece may also be transported.
-		other_piece_type = self.get_piece_type(content.piece_type_id)
-		return piece_type.piece_type_id in other_piece_type.transportable
+		return False
+		#other_piece_type = self.get_piece_type(content.piece_type_id)
+		#return piece_type.piece_type_id in other_piece_type.transportable
 
 	def is_player_piece(self, piece_id):
 		return piece_id in self.player_pieces
