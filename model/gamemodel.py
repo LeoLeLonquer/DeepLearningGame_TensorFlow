@@ -206,7 +206,7 @@ class GameModel(Model):
 			# play actions
 			piece_ids = self.situation.player_pieces.keys()
 			if t % 20 == 0:
-				print("Nb piece [{}] : {}".format(t,len(piece_ids)))
+				print("Nb piece [{}] : {}".format(t-old_t,len(piece_ids)))
 			for piece_id in piece_ids:
 				#while can go further
 				piece = self.situation.player_pieces[piece_id]
