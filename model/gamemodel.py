@@ -238,7 +238,7 @@ class GameModel(Model):
 							direction = random.choice(result) # choose the one gave by the output_vector x ProbaVector
 							self.communication.action("move %d %d" % (piece_id, direction))
 						else:
-						    	action_index = np.argmax(readout_t[i]) #this gets only the best action_index
+						    	action_index = np.nanargmax(readout_t[i]) #this gets only the best action_index
 						    	if action_index != 6:
 							    	self.communication.action("move %d %d" % (piece_id, action_index))
 					depth = depth - 1
