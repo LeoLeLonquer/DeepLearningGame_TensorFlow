@@ -242,7 +242,7 @@ class GameModel(Model):
 							self.communication.action("move %d %d" % (piece_id, direction))
 						else:
 						    	action_index = np.nanargmax(readout_t[i]) #this gets only the best action_index
-								a_t[i] = readout_t[i]
+						    	a_t[i] = readout_t[i]
 						    	if action_index != 6:
 							    	self.communication.action("move %d %d" % (piece_id, action_index))
 					depth = depth - 1
