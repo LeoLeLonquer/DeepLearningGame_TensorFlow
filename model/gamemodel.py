@@ -251,6 +251,7 @@ class GameModel(Model):
 								direction = random.choice(result) # choose the one gave by the output_vector x ProbaVector
 								a_t[i] = np.zeros(ACTIONS)
 								a_t[i][direction] = 1
+								print("Action[{}] : {}".format(direction,a_t[i]))
 								self.communication.action("move %d %d" % (piece_id, direction))
 							else:
 								action_index = np.nanargmax(readout_t[i]) #this gets only the best action_index
