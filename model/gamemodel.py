@@ -27,7 +27,6 @@ FINAL_EPSILON = 0.05 # final value of epsilon
 INITIAL_EPSILON = 1.0 # starting value of epsilon
 ACTIONS = 7 # number of valid actions
 OBSERVE = 50 # timesteps to observe before training
-#TODO : use a file to store nb of previous actions 
 EXPLORE = 50000 # frames over which to anneal epsilon
 GAMMA = 0.99 # decay rate of past observations
 REPLAY_MEMORY = 100 # number of previous transitions to remember
@@ -45,13 +44,20 @@ class GameModel(Model):
 		self.build_model()
 		self.init_server(server_name,server_port)
 		#GET t
-		if os.path.exists('t.pckl'):
-			f = open('t.pckl','r+')
+		f = open('t.pckl','r+')
+		if os.path.exists(f):
 			self.t = float(pickle.load(f))
 		else:
-			f = open('t.pckl','w')
 			self.t = 0
 			pickle.dump(self.t, f)
+		f.close()
+		#Get minibatch
+		f = open('d.pckl','r+')
+		if os.path.exists(f):
+			self.d = pickle.load(f)
+		else:
+			self.d = deque()
+			pickle.dump(self.d, f)
 		f.close()
 		
 	def init_server(self,server_name,server_port):
@@ -128,7 +134,7 @@ class GameModel(Model):
 		train_step = tf.train.AdamOptimizer(learning_rate).minimize(cost)		
 		
 		# store the previous observations in replay memory
-		D = deque()
+		D = self.d
 		# initialize all variables
 		tf.initialize_all_variables().run()
 		
@@ -141,6 +147,7 @@ class GameModel(Model):
 		start_time = time.time()
 
 		t = self.t
+		old_t = t
 		#TODO : take epsilon from file
 		epsilon = INITIAL_EPSILON
 		
@@ -318,4 +325,4 @@ class GameModel(Model):
 			# Show current progress
 			step = sess.run(self.step)
 			if t % 100 == 1:
-				print("Epoch: [%2d], player: %d time: %4.4f, epsilon: %.8f" % (t,self.situation.player_id, time.time() - start_time, epsilon))
+				print("Epoch: [%2d], player: %d time: %4.4f, epsilon: %.8f" % (t-old_t,self.situation.player_id, time.time() - start_time, epsilon))
