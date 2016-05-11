@@ -240,7 +240,7 @@ class GameModel(Model):
 										readout_t[i][dir]=0
 									else:
 										print("Should not pass here.")
-										print("Content : {}".format(self.situation.get_content(next_location).owner))
+										print("Content : {} - us : {}".format(self.situation.get_content(next_location).owner,self.situation.player_id))
 										assert(False);
 						else:
 							# can't play this directions
