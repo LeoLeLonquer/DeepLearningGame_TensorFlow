@@ -226,7 +226,7 @@ class GameModel(Model):
 							# next_location is next(x,y)
 							result.append(dir)
 							action_done = ELSE #at startup
-							print("Readout_t : {}".format(readout_t[i]))
+							#print("Readout_t : {}".format(readout_t[i]))
 							if self.situation.get_terrain(next_location) == ssituation.Situation.GROUND or self.situation.get_terrain(next_location) == ssituation.Situation.WATER or self.situation.is_tile_player_city(next_location):
 								readout_t[i][dir]=float(readout_t[i][dir])*0.5
 							elif self.situation.is_tile_free_city(next_location) or self.situation.is_tile_enemy_city(next_location):
@@ -248,13 +248,13 @@ class GameModel(Model):
 							direction = random.choice(result) # choose the one gave by the output_vector x ProbaVector
 							a_t[i] = np.zeros(ACTIONS)
 							a_t[i][direction] = 1
-							print("Result : {}".format(result))
-							print("Action[{}] : {}".format(direction,a_t[i]))
+							#print("Result : {}".format(result))
+							#print("Action[{}] : {}".format(direction,a_t[i]))
 							self.communication.action("move %d %d" % (piece_id, direction))
 						else:
 							action_index = np.nanargmax(readout_t[i]) #this gets only the best action_index
 							a_t[i] = readout_t[i]
-							print("Action[{}] : {}".format(action_index,a_t[i]))
+							#print("Action[{}] : {}".format(action_index,a_t[i]))
 							if action_index != 6:
 								self.communication.action("move %d %d" % (piece_id, action_index))
 					depth = depth - 1
