@@ -213,4 +213,4 @@ class Parser:
 				self.proxy_handlers[i](groups)
 				return
 		self.the_situation.show()
-		raise Exception("error: not handled: " + message)
+		print("error: not handled: " + message)
