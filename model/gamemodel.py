@@ -16,7 +16,8 @@ import tensorflow as tf
 import random
 import numpy as np
 from collections import deque
-import pickle
+#import pickle
+import cPickle as pickle
 
 from .base import Model
 from ops import *
@@ -45,22 +46,22 @@ class GameModel(Model):
 		self.init_server(server_name,server_port)
 		#GET t
 		if os.path.exists('t.pckl'):
-			f = open('t.pckl','r') #read
+			f = open('t.pckl','rb') #read
 			self.t = float(pickle.load(f))
 		else:
-			f = open('t.pckl','w') #write
+			f = open('t.pckl','wb') #write
 			self.t = 0
 			pickle.dump(self.t, f)
 		f.close()
 		#Get minibatch
 		if os.path.exists('d.tckl'):
-			f = open('d.pckl','r')
-			self.d = pickle.load(f)
+			d = open('d.pckl','rb')
+			self.d = pickle.load(d)
 		else:
-			f = open('d.pckl','w')
+			d = open('d.pckl','wb')
 			self.d = deque()
-			pickle.dump(self.d, f)
-		f.close()
+			pickle.dump(self.d, d)
+		d.close()
 		
 	def init_server(self,server_name,server_port):
 		server_name = server_name
@@ -319,12 +320,12 @@ class GameModel(Model):
 			# Save checkpoint each 100 steps
 			if t != 0 and t % 100 == 0:
 				self.save(checkpoint_dir, step)
-				f = open('t.pckl', 'w')
+				f = open('t.pckl', 'wb')
 				pickle.dump(t, f)
 				f.close()
-				f = open('d.pckl', 'w')
-				pickle.dump(D, f)
-				f.close()
+				d = open('d.pckl', 'wb')
+				pickle.dump(D, d)
+				d.close()
 			# Show current progress
 			step = sess.run(self.step)
 			if t % 100 == 1:
