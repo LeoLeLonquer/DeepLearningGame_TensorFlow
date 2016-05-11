@@ -57,6 +57,7 @@ class GameModel(Model):
 		if os.path.exists('d.tckl'):
 			d = open('d.pckl','rb')
 			self.d = pickle.load(d)
+			print("Loaded d : {}".format(self.d))
 		else:
 			d = open('d.pckl','wb')
 			self.d = deque()
