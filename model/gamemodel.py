@@ -279,11 +279,11 @@ class GameModel(Model):
 
 			if t> OBSERVE:
 				# sample a minibatch to train on
-				if BATCH > len(D):
+				if BATCH < len(D):
 					minibatch = random.sample(D, BATCH)
 				else : 
 					try:
-						minibatch = random.sample(D,len(D)-1)
+						minibatch = random.sample(D,len(D))
 					except ValueError:
 						print("ValueError : sample population")
 						minibatch = random.sample(D,1)
