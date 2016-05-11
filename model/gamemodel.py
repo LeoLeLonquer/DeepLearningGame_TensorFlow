@@ -16,6 +16,7 @@ import tensorflow as tf
 import random
 import numpy as np
 from collections import deque
+import pickle
 
 from .base import Model
 from ops import *
@@ -25,9 +26,9 @@ debug = tools.debug
 FINAL_EPSILON = 0.05 # final value of epsilon
 INITIAL_EPSILON = 1.0 # starting value of epsilon
 ACTIONS = 7 # number of valid actions
-OBSERVE = 50.0 # timesteps to observe before training
+OBSERVE = 50 # timesteps to observe before training
 #TODO : use a file to store nb of previous actions 
-EXPLORE = 500.0 # frames over which to anneal epsilon
+EXPLORE = 50000 # frames over which to anneal epsilon
 GAMMA = 0.99 # decay rate of past observations
 REPLAY_MEMORY = 100 # number of previous transitions to remember
 BATCH = 40 # size of minibatch
@@ -43,6 +44,14 @@ class GameModel(Model):
 		self.sess = sess
 		self.build_model()
 		self.init_server(server_name,server_port)
+		#GET t
+		f = open('t.pckl')
+		if os.path.exists('t.pckl'):
+			self.t = float(pickle.load(f))
+		else:
+			self.t = 0
+			pickle.dump(self.t, f)
+		f.close()
 		
 	def init_server(self,server_name,server_port):
 		server_name = server_name
@@ -130,7 +139,7 @@ class GameModel(Model):
 		
 		start_time = time.time()
 
-		t = 0
+		t = self.t
 		#TODO : take epsilon from file
 		epsilon = INITIAL_EPSILON
 		
@@ -238,16 +247,16 @@ class GameModel(Model):
 					# check only if alive				
 				if not self.situation.is_player_piece(piece_id):
 					if action_done == ATTACK:
-						r_t[i] = -15 #not good to die during attack
+						r_t[i] = -150 #not good to die during attack
 					elif action_done == CITY: 
 						r_t[i] = -1 #dying while taking a city is not really bad
 					else:
-						r_t[i] = -5 #dying by being attacked is bad 
+						r_t[i] = -50 #dying by being attacked is bad 
 				else:
 					if action_done == ATTACK:
-						r_t[i] = 15 #winning an attack
+						r_t[i] = 150 #winning an attack
 					elif action_done == CITY: 
-						r_t[i] = 100 #taking a city
+						r_t[i] = 10000 #taking a city
 					else:
 						r_t[i] = 1 #being alive 
 
@@ -298,6 +307,9 @@ class GameModel(Model):
 			# Save checkpoint each 100 steps
 			if t != 0 and t % 100 == 0:
 				self.save(checkpoint_dir, step)
+				f = open('t.pckl', 'w')
+				pickle.dump(t, f)
+				f.close()
 			# Show current progress
 			step = sess.run(self.step)
 			if t % 100 == 1:
