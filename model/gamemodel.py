@@ -270,6 +270,7 @@ class GameModel(Model):
 					s_t1[j] = s_t[j]
 				
 				# store the transition in D
+				a_t[i][np.isnan(a_t[i])] = 0
 				D.append((s_t[i], a_t[i], r_t[i], s_t1[i], terminal))
 
 			if t> OBSERVE:
