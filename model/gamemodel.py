@@ -141,9 +141,11 @@ class GameModel(Model):
 		#Get minibatch
 		if os.path.exists('d.tckl'):
 			d = open('d.pckl','rb')
+			print("Load d.")
 			D = pickle.load(d)
 			print("Loaded d : {}".format(self.d))
 		else:
+			print("Create d.")
 			d = open('d.pckl','wb')
 			D = deque()
 			pickle.dump(D, d)
