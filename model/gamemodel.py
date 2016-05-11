@@ -132,7 +132,7 @@ class GameModel(Model):
 		#GET t
 		if os.path.exists('t.pckl'):
 			f = open('t.pckl','rb') #read
-			t = float(pickle.load(f))
+			t = int(pickle.load(f))
 		else:
 			f = open('t.pckl','wb') #write
 			t = 0
