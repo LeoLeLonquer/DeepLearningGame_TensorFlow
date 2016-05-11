@@ -243,20 +243,20 @@ class GameModel(Model):
 						else:
 							# can't play this directions
 							readout_t[i][dir] = 0
-						if len(result)>0:		
-							if random.random() <= epsilon or t <= OBSERVE:
-								direction = random.choice(result) # choose the one gave by the output_vector x ProbaVector
-								a_t[i] = np.zeros(ACTIONS)
-								a_t[i][direction] = 1
-								print("Result : {}".format(result))
-								print("Action[{}] : {}".format(direction,a_t[i]))
-								self.communication.action("move %d %d" % (piece_id, direction))
-							else:
-								action_index = np.nanargmax(readout_t[i]) #this gets only the best action_index
-								a_t[i] = readout_t[i]
-								print("Action[{}] : {}".format(action_index,a_t[i]))
-								if action_index != 6:
-									self.communication.action("move %d %d" % (piece_id, action_index))
+					if len(result)>0:		
+						if random.random() <= epsilon or t <= OBSERVE:
+							direction = random.choice(result) # choose the one gave by the output_vector x ProbaVector
+							a_t[i] = np.zeros(ACTIONS)
+							a_t[i][direction] = 1
+							print("Result : {}".format(result))
+							print("Action[{}] : {}".format(direction,a_t[i]))
+							self.communication.action("move %d %d" % (piece_id, direction))
+						else:
+							action_index = np.nanargmax(readout_t[i]) #this gets only the best action_index
+							a_t[i] = readout_t[i]
+							print("Action[{}] : {}".format(action_index,a_t[i]))
+							if action_index != 6:
+								self.communication.action("move %d %d" % (piece_id, action_index))
 					depth = depth - 1
 					
 				## Observe the action and evaluate the result (Q function)
