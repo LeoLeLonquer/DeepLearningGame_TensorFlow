@@ -227,21 +227,19 @@ class GameModel(Model):
 							result.append(dir)
 							action_done = ELSE #at startup
 							print("Readout_t : {}".format(readout_t[i]))
-							if self.situation.is_in_map(next_location):
-								if self.situation.is_tile_none(next_location):
-									if self.situation.get_terrain(next_location) == ssituation.Situation.GROUND or self.situation.get_terrain(next_location) == ssituation.Situation.WATER or self.situation.is_tile_player_city(next_location):
-										readout_t[i][dir]=float(readout_t[i][dir])*0.5
-									elif self.situation.is_tile_free_city(next_location) or self.situation.is_tile_enemy_city(next_location):
-										readout_t[i][dir]= 1 # we take it
-										action_done = CITY
-									elif self.situation.is_tile_enemy_piece(next_location):
-										readout_t[i][dir]=float(readout_t[i][dir])*0.3 # TODO update with kind of troops
-										action_done = ATTACK
-									elif self.situation.is_tile_player_piece(next_location):
-										readout_t[i][dir]=0
-									else:
-										print("Content : {} - us : {}".format(self.situation.get_content(next_location).owner,self.situation.player_id))
-										assert(False);
+							if self.situation.get_terrain(next_location) == ssituation.Situation.GROUND or self.situation.get_terrain(next_location) == ssituation.Situation.WATER or self.situation.is_tile_player_city(next_location):
+								readout_t[i][dir]=float(readout_t[i][dir])*0.5
+							elif self.situation.is_tile_free_city(next_location) or self.situation.is_tile_enemy_city(next_location):
+								readout_t[i][dir]= 1 # we take it
+								action_done = CITY
+							elif self.situation.is_tile_enemy_piece(next_location):
+								readout_t[i][dir]=float(readout_t[i][dir])*0.3 # TODO update with kind of troops
+								action_done = ATTACK
+							elif self.situation.is_tile_player_piece(next_location):
+								readout_t[i][dir]=0
+							else:
+								print("Content : {} - us : {}".format(self.situation.get_content(next_location).owner,self.situation.player_id))
+								assert(False);
 						else:
 							# can't play this directions
 							readout_t[i][dir] = 0
