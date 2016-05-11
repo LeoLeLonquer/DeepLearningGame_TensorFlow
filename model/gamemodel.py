@@ -322,6 +322,9 @@ class GameModel(Model):
 				f = open('t.pckl', 'w')
 				pickle.dump(t, f)
 				f.close()
+				f = open('d.pckl', 'w')
+				pickle.dump(D, f)
+				f.close()
 			# Show current progress
 			step = sess.run(self.step)
 			if t % 100 == 1:
