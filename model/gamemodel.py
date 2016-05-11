@@ -45,7 +45,7 @@ class GameModel(Model):
 		self.build_model()
 		self.init_server(server_name,server_port)
 		#GET t
-		f = open('t.pckl')
+		f = open('t.pckl','w')
 		if os.path.exists('t.pckl'):
 			self.t = float(pickle.load(f))
 		else:
