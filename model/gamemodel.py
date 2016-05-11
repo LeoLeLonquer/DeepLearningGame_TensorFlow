@@ -246,13 +246,13 @@ class GameModel(Model):
 						else:
 							# can't play this directions
 							readout_t[i][dir] = 0
-					if len(result)>0:		
-						if random.random() <= epsilon or t <= OBSERVE:
-							direction = random.choice(result) # choose the one gave by the output_vector x ProbaVector
-							a_t[i] = np.zeros(ACTIONS)
-							a_t[i][direction] = 1
-							self.communication.action("move %d %d" % (piece_id, direction))
-						else:
+						if len(result)>0:		
+							if random.random() <= epsilon or t <= OBSERVE:
+								direction = random.choice(result) # choose the one gave by the output_vector x ProbaVector
+								a_t[i] = np.zeros(ACTIONS)
+								a_t[i][direction] = 1
+								self.communication.action("move %d %d" % (piece_id, direction))
+							else:
 						    	action_index = np.nanargmax(readout_t[i]) #this gets only the best action_index
 						    	a_t[i] = readout_t[i]
 						    	if action_index != 6:
