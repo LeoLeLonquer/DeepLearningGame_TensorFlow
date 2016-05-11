@@ -44,25 +44,6 @@ class GameModel(Model):
 		self.sess = sess
 		self.build_model()
 		self.init_server(server_name,server_port)
-		#GET t
-		if os.path.exists('t.pckl'):
-			f = open('t.pckl','rb') #read
-			self.t = float(pickle.load(f))
-		else:
-			f = open('t.pckl','wb') #write
-			self.t = 0
-			pickle.dump(self.t, f)
-		f.close()
-		#Get minibatch
-		if os.path.exists('d.tckl'):
-			d = open('d.pckl','rb')
-			self.d = pickle.load(d)
-			print("Loaded d : {}".format(self.d))
-		else:
-			d = open('d.pckl','wb')
-			self.d = deque()
-			pickle.dump(self.d, d)
-		d.close()
 		
 	def init_server(self,server_name,server_port):
 		server_name = server_name
@@ -136,9 +117,7 @@ class GameModel(Model):
 		readout_action = tf.reduce_sum(tf.mul(self.readout, a), reduction_indices = 1)
 		cost = tf.reduce_mean(tf.square(y - readout_action))
 		train_step = tf.train.AdamOptimizer(learning_rate).minimize(cost)		
-		
-		# store the previous observations in replay memory
-		D = self.d
+
 		# initialize all variables
 		tf.initialize_all_variables().run()
 		
@@ -150,7 +129,26 @@ class GameModel(Model):
 		
 		start_time = time.time()
 
-		t = int(self.t)
+		#GET t
+		if os.path.exists('t.pckl'):
+			f = open('t.pckl','rb') #read
+			t = float(pickle.load(f))
+		else:
+			f = open('t.pckl','wb') #write
+			t = 0
+			pickle.dump(t, f)
+		f.close()
+		#Get minibatch
+		if os.path.exists('d.tckl'):
+			d = open('d.pckl','rb')
+			D = pickle.load(d)
+			print("Loaded d : {}".format(self.d))
+		else:
+			d = open('d.pckl','wb')
+			D = deque()
+			pickle.dump(D, d)
+		d.close()
+		
 		old_t = t
 		
 		epsilon = INITIAL_EPSILON
