@@ -31,6 +31,7 @@ OBSERVE = 50 # timesteps to observe before training
 EXPLORE = 2500 # frames over which to anneal epsilon
 GAMMA = 0.99 # decay rate of past observations
 REPLAY_MEMORY = 100 # number of previous transitions to remember
+MAX_SIZE_DEQUE = 10000
 BATCH = 40 # size of minibatch
 NB_CHUNK = 16
 size = 10 #split(size)
@@ -144,7 +145,7 @@ class GameModel(Model):
 			D = pickle.load(d)
 		else:
 			d = open('d.pckl','wb')
-			D = deque()
+			D = deque(maxlen=MAX_SIZE_DEQUE)
 			pickle.dump(D, d)
 		d.close()
 		
