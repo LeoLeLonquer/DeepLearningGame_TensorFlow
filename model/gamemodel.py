@@ -228,7 +228,8 @@ class GameModel(Model):
 						# check in the vector the best choice
 						directions = algos.directions
 						loc = piece.get_location()
-						result = []
+						result = [] #ICI
+						# print("Range len directions : %d"% len(directions))
 						for dir in range(len(directions)):
 							next_location = loc[0] + directions[dir][0], loc[1] + directions[dir][1] # x , y
 							if self.situation.can_player_piece_be_on(piece_id, next_location):
@@ -238,7 +239,7 @@ class GameModel(Model):
 								action_done = ELSE #at startup
 								#print("Readout_t : {}".format(readout_t[i]))
 								if self.situation.is_tile_free_city(next_location) or self.situation.is_tile_enemy_city(next_location):
-									readout_t[i][dir]= 1 # we take it
+									readout_t[i][dir]= 1000 # we take it
 									action_done = CITY
 								elif self.situation.is_tile_enemy_piece(next_location):
 									readout_t[i][dir]=float(readout_t[i][dir])*1.5 # TODO update with kind of troops
@@ -250,6 +251,7 @@ class GameModel(Model):
 								# can't play this directions
 								readout_t[i][dir] = 0
 						if len(result)>0:		
+							#print(result) #On a u 8 dans result
 							if random.random() <= epsilon or t <= OBSERVE:
 								direction = random.choice(result) # choose the one gave by the output_vector x ProbaVector
 								a_t[i] = np.zeros(ACTIONS)
