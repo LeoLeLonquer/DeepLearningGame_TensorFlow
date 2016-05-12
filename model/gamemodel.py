@@ -119,18 +119,18 @@ class GameModel(Model):
 		cost = tf.reduce_mean(tf.square(y - readout_action))
 		train_step = tf.train.AdamOptimizer(learning_rate).minimize(cost)		
 
+		init = tf.initialize_all_variables()
+		
 		# Create a summary to monitor cost function
 		tf.scalar_summary("loss", cost)
 
 		# Merge all summaries to a single operator
 		merged_summary_op = tf.merge_all_summaries()
 		
-		
 		# Set logs writer into folder /tmp/tensorflow_logs
-		summary_writer = tf.train.SummaryWriter('/tmp/tensorflow_logs', graph_def=sess.graph_def)
+		summary_writer = tf.train.SummaryWriter('/tmp/tensorflow_logs', graph=sess.graph)
 	
-		# initialize all variables
-		tf.initialize_all_variables().run()
+		sess.run(init)
 		
 		sess.run(self.step.assign(0))
 		
