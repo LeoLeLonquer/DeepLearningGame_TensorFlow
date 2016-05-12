@@ -66,17 +66,17 @@ class GameModel(Model):
 
 	def build_model(self):
 		# network weights
-		W_conv1 =  tf.Variable(tf.truncated_normal([4, 4, 4, 16], stddev=0.01)) 
-		b_conv1 =  tf.Variable(tf.constant(0.01, shape = [16]))
+		W_conv1 = weight_variable([4, 4, 4, 16])
+		b_conv1 = bias_variable([16])
 		
-		W_conv2 = tf.Variable(tf.truncated_normal([3, 3, 16, 16], stddev=0.01))
-		b_conv2 =  tf.Variable(tf.constant(0.01, shape = [16]))
+		W_conv2 = weight_variable([3, 3, 16, 16])
+		b_conv2 = bias_variable([16])
 		
-		W_fc2 = tf.Variable(tf.truncated_normal([[144, ACTIONS], stddev=0.01))
-		b_fc2 =  tf.Variable(tf.constant(0.01, shape = [ACTIONS]))
+		W_fc2 = weight_variable([144, ACTIONS])
+		b_fc2 = bias_variable([ACTIONS])
 		
-		W_fc1 = tf.Variable(tf.truncated_normal([144,144], stddev=0.01))
-		b_fc1 =  tf.Variable(tf.constant(0.01, shape = [144]))
+		W_fc1 = weight_variable([144, 144])
+		b_fc1 = bias_variable([144])
 		
 		# input layer
 		self.input_layer = tf.placeholder("float", [None, 10, 10, 4])
@@ -106,8 +106,6 @@ class GameModel(Model):
 
 		self.step = tf.Variable(0, trainable=False)
 		
-		sess = tf.Session()
-		
 		one = tf.constant(1)
 		new_value = tf.add(self.step, one)
 		update = tf.assign(self.step, new_value)
@@ -119,227 +117,232 @@ class GameModel(Model):
 		cost = tf.reduce_mean(tf.square(y - readout_action))
 		train_step = tf.train.AdamOptimizer(learning_rate).minimize(cost)		
 		
+		init = tf.initialize_all_variables()
+		
 		# Create a summary to monitor cost function
 		tf.scalar_summary("loss", cost)
 
 		# Merge all summaries to a single operator
 		merged_summary_op = tf.merge_all_summaries()
-	
-		tf.initialize_all_variables().run()
 		
-		# Set logs writer into folder /tmp/tensorflow_logs
-		summary_writer = tf.train.SummaryWriter('/tmp/tensorflow_logs', graph=sess.graph)
-	
-		sess.run(self.step.assign(0))
-		
-		# loading networks
-		if load :
-			self.load(checkpoint_dir)
-		
-		start_time = time.time()
+		with tf.Session() as sess:
+			sess.run(init)
 
-		#GET t
-		if os.path.exists('t.pckl'):
-			f = open('t.pckl','rb') #read
-			t = int(pickle.load(f))
-		else:
-			f = open('t.pckl','wb') #write
-			t = 0
-			pickle.dump(t, f)
-		f.close()
-		#Get minibatch
-		if os.path.exists('d.pckl'):
-			d = open('d.pckl','rb')
-			D = pickle.load(d)
-		else:
-			d = open('d.pckl','wb')
-			D = deque(maxlen=MAX_SIZE_DEQUE)
-			pickle.dump(D, d)
-		d.close()
+			# Set logs writer into folder /tmp/tensorflow_logs
+			summary_writer = tf.train.SummaryWriter('/tmp/tensorflow_logs', graph_def=sess.graph_def)
+			# Set logs writer into folder /tmp/tensorflow_logs
+			summary_writer = tf.train.SummaryWriter('/tmp/tensorflow_logs', graph=sess.graph)
 		
-		old_t = t
-		
-		epsilon = INITIAL_EPSILON
-		for x in range(t):
-			if epsilon > FINAL_EPSILON:
-				epsilon -= (INITIAL_EPSILON - FINAL_EPSILON) / EXPLORE
-		
-		#Static allocation to be safe
-		readout_t = [None]*NB_CHUNK
-		s_t = [None]*NB_CHUNK
-		s_t1 = [None]*NB_CHUNK
-		a_t = [[None]*ACTIONS]*NB_CHUNK # vector of vector which contain the executed action
-		r_t = [None]*NB_CHUNK
-		
-		
-		while 1:
-			self.communication.wait()
+			sess.run(self.step.assign(0))
 			
-			self.situation.check()
-			chunks = self.situation.split(10)
+			# loading networks
+			if load :
+				self.load(checkpoint_dir)
 			
-			#TODO : maybe select good troops ->
-			for city_id in self.situation.player_cities:
-				think.choose_relevant_random_production(self.situation, self.communication, city_id)
-				
-			for i in range(len(chunks)):
-				chunk = chunks[i]
-				
-				for q in range(len(chunk)):
-					for r in range(len(chunk[q])):
-						if chunk[q][r].visible == False:
-							chunk[q][r] = 0
-						else:
-							if chunk[q][r].content == None:
-								if chunk[q][r].terrain == ssituation.Situation.GROUND:
-									chunk[q][r] = 1
-								else:
-									chunk[q][r] = 2
-							else:
-								if isinstance(chunk[q][r].content, ssituation.City):
-									chunk[q][r] = 3
-								elif isinstance(chunk[q][r].content, ssituation.OwnedCity):
-									chunk[q][r] = 4 + chunk[q][r].content.owner # 4 et 5 !!!
-								else:
-									chunk[q][r] = 6 + chunk[q][r].content.piece_type_id + chunk[q][r].content.owner * len(self.situation.piece_types)
-				#print chunk
-				s_t[i] = chunk #TODO : update ?
-				s_t[i] = np.stack((s_t[i] , s_t[i] , s_t[i] ,s_t[i] ), axis = 2)
-				#evaluate with current model 
-				readout_t[i] = self.readout.eval(feed_dict = {self.input_layer : [s_t[i]]})[0]
-			
-			# scale down epsilon
-			if epsilon > FINAL_EPSILON:
-				epsilon -= (INITIAL_EPSILON - FINAL_EPSILON) / EXPLORE
-		
-			# play actions
-			piece_ids = self.situation.player_pieces.keys()
-			if t % 20 == 0:
-				print("Nb piece [{}] : {}".format(t-old_t,len(piece_ids)))
-			for piece_id in piece_ids:
-				#while can go further
-				piece = self.situation.player_pieces[piece_id]
-				depth = self.situation.piece_types[piece.piece_type_id].speed
-				#find good chunk
-				i = self.situation.split_int(size,piece_id)
-				while depth > 0 and self.situation.is_player_piece(piece_id):
-					# check in the vector the best choice
-					directions = algos.directions
-					loc = piece.get_location()
-					result = []
-					for dir in range(len(directions)):
-						next_location = loc[0] + directions[dir][0], loc[1] + directions[dir][1] # x , y
-						if self.situation.can_player_piece_be_on(piece_id, next_location):
-							# keep coef and check the content of the tile
-							# next_location is next(x,y)
-							result.append(dir)
-							action_done = ELSE #at startup
-							#print("Readout_t : {}".format(readout_t[i]))
-							if self.situation.is_tile_free_city(next_location) or self.situation.is_tile_enemy_city(next_location):
-								readout_t[i][dir]= 1 # we take it
-								action_done = CITY
-							elif self.situation.is_tile_enemy_piece(next_location):
-								readout_t[i][dir]=float(readout_t[i][dir])*1.5 # TODO update with kind of troops
-								action_done = ATTACK
-							elif self.situation.is_tile_player_piece(next_location):
-								readout_t[i][dir]=0
-								
-						else:
-							# can't play this directions
-							readout_t[i][dir] = 0
-					if len(result)>0:		
-						if random.random() <= epsilon or t <= OBSERVE:
-							direction = random.choice(result) # choose the one gave by the output_vector x ProbaVector
-							a_t[i] = np.zeros(ACTIONS)
-							a_t[i][direction] = 1
-							#print("Result : {}".format(result))
-							#print("Action[{}] : {}".format(direction,a_t[i]))
-							self.communication.action("move %d %d" % (piece_id, direction))
-						else:
-							action_index = np.nanargmax(readout_t[i]) #this gets only the best action_index
-							a_t[i] = readout_t[i]
-							#print("Action[{}] : {}".format(action_index,a_t[i]))
-							if action_index != 6:
-								self.communication.action("move %d %d" % (piece_id, action_index))
-					depth = depth - 1
-					
-				## Observe the action and evaluate the result (Q function)
-					# check only if alive				
-				if not self.situation.is_player_piece(piece_id):
-					if action_done == ATTACK:
-						r_t[i] = -150 #not good to die during attack
-					elif action_done == CITY: 
-						r_t[i] = -1 #dying while taking a city is not really bad
-					else:
-						r_t[i] = -50 #dying by being attacked is bad 
-				else:
-					if action_done == ATTACK:
-						r_t[i] = 150 #winning an attack
-					elif action_done == CITY: 
-						r_t[i] = 10000 #taking a city
-					else:
-						r_t[i] = 1 #being alive 
+			start_time = time.time()
 
+			#GET t
+			if os.path.exists('t.pckl'):
+				f = open('t.pckl','rb') #read
+				t = int(pickle.load(f))
+			else:
+				f = open('t.pckl','wb') #write
+				t = 0
+				pickle.dump(t, f)
+			f.close()
+			#Get minibatch
+			if os.path.exists('d.pckl'):
+				d = open('d.pckl','rb')
+				D = pickle.load(d)
+			else:
+				d = open('d.pckl','wb')
+				D = deque(maxlen=MAX_SIZE_DEQUE)
+				pickle.dump(D, d)
+			d.close()
+			
+			old_t = t
+			
+			epsilon = INITIAL_EPSILON
+			for x in range(t):
+				if epsilon > FINAL_EPSILON:
+					epsilon -= (INITIAL_EPSILON - FINAL_EPSILON) / EXPLORE
+			
+			#Static allocation to be safe
+			readout_t = [None]*NB_CHUNK
+			s_t = [None]*NB_CHUNK
+			s_t1 = [None]*NB_CHUNK
+			a_t = [[None]*ACTIONS]*NB_CHUNK # vector of vector which contain the executed action
+			r_t = [None]*NB_CHUNK
+			
+			
+			while 1:
+				self.communication.wait()
+				
 				self.situation.check()
 				chunks = self.situation.split(10)
-				# TODO : check if game ended
-				terminal = 0
 				
-				#state result
-				for j in range(len(chunks)):
-					s_t1[j] = s_t[j]
+				#TODO : maybe select good troops ->
+				for city_id in self.situation.player_cities:
+					think.choose_relevant_random_production(self.situation, self.communication, city_id)
+					
+				for i in range(len(chunks)):
+					chunk = chunks[i]
+					
+					for q in range(len(chunk)):
+						for r in range(len(chunk[q])):
+							if chunk[q][r].visible == False:
+								chunk[q][r] = 0
+							else:
+								if chunk[q][r].content == None:
+									if chunk[q][r].terrain == ssituation.Situation.GROUND:
+										chunk[q][r] = 1
+									else:
+										chunk[q][r] = 2
+								else:
+									if isinstance(chunk[q][r].content, ssituation.City):
+										chunk[q][r] = 3
+									elif isinstance(chunk[q][r].content, ssituation.OwnedCity):
+										chunk[q][r] = 4 + chunk[q][r].content.owner # 4 et 5 !!!
+									else:
+										chunk[q][r] = 6 + chunk[q][r].content.piece_type_id + chunk[q][r].content.owner * len(self.situation.piece_types)
+					#print chunk
+					s_t[i] = chunk #TODO : update ?
+					s_t[i] = np.stack((s_t[i] , s_t[i] , s_t[i] ,s_t[i] ), axis = 2)
+					#evaluate with current model 
+					readout_t[i] = self.readout.eval(feed_dict = {self.input_layer : [s_t[i]]})[0]
 				
-				# store the transition in D
-				D.append((s_t[i], a_t[i], r_t[i], s_t1[i], terminal))
-
-			if t> OBSERVE:
-				# sample a minibatch to train on
-				if BATCH < len(D):
-					minibatch = random.sample(D, BATCH)
-				else : 
-					try:
-						minibatch = random.sample(D,len(D))
-					except ValueError:
-						print("ValueError : sample population")
-						minibatch = random.sample(D,1)
-				# get the batch variables
-				s_j_batch = [d[0] for d in minibatch]
-				a_batch = [d[1] for d in minibatch]
-				r_batch = [d[2] for d in minibatch]
-				s_j1_batch = [d[3] for d in minibatch]
-				
-				y_batch = []
-				readout_j1_batch = self.readout.eval(feed_dict = {self.input_layer : s_j1_batch})
-				for i in range(0, len(minibatch)):
-				# if terminal only equals reward
-					if minibatch[i][4]:
-						y_batch.append(r_batch[i])
-					else:
-						y_batch.append(r_batch[i] + GAMMA * float(np.max(readout_j1_batch[i])))
+				# scale down epsilon
+				if epsilon > FINAL_EPSILON:
+					epsilon -= (INITIAL_EPSILON - FINAL_EPSILON) / EXPLORE
+			
+				# play actions
+				piece_ids = self.situation.player_pieces.keys()
+				if t % 20 == 0:
+					print("Nb piece [{}] : {}".format(t-old_t,len(piece_ids)))
+				for piece_id in piece_ids:
+					#while can go further
+					piece = self.situation.player_pieces[piece_id]
+					depth = self.situation.piece_types[piece.piece_type_id].speed
+					#find good chunk
+					i = self.situation.split_int(size,piece_id)
+					while depth > 0 and self.situation.is_player_piece(piece_id):
+						# check in the vector the best choice
+						directions = algos.directions
+						loc = piece.get_location()
+						result = []
+						for dir in range(len(directions)):
+							next_location = loc[0] + directions[dir][0], loc[1] + directions[dir][1] # x , y
+							if self.situation.can_player_piece_be_on(piece_id, next_location):
+								# keep coef and check the content of the tile
+								# next_location is next(x,y)
+								result.append(dir)
+								action_done = ELSE #at startup
+								#print("Readout_t : {}".format(readout_t[i]))
+								if self.situation.is_tile_free_city(next_location) or self.situation.is_tile_enemy_city(next_location):
+									readout_t[i][dir]= 1 # we take it
+									action_done = CITY
+								elif self.situation.is_tile_enemy_piece(next_location):
+									readout_t[i][dir]=float(readout_t[i][dir])*1.5 # TODO update with kind of troops
+									action_done = ATTACK
+								elif self.situation.is_tile_player_piece(next_location):
+									readout_t[i][dir]=0
+									
+							else:
+								# can't play this directions
+								readout_t[i][dir] = 0
+						if len(result)>0:		
+							if random.random() <= epsilon or t <= OBSERVE:
+								direction = random.choice(result) # choose the one gave by the output_vector x ProbaVector
+								a_t[i] = np.zeros(ACTIONS)
+								a_t[i][direction] = 1
+								#print("Result : {}".format(result))
+								#print("Action[{}] : {}".format(direction,a_t[i]))
+								self.communication.action("move %d %d" % (piece_id, direction))
+							else:
+								action_index = np.nanargmax(readout_t[i]) #this gets only the best action_index
+								a_t[i] = readout_t[i]
+								#print("Action[{}] : {}".format(action_index,a_t[i]))
+								if action_index != 6:
+									self.communication.action("move %d %d" % (piece_id, action_index))
+						depth = depth - 1
 						
-				train_step.run(feed_dict = {
-					y : y_batch,
-					a : a_batch,
-					self.input_layer : s_j_batch})
-				# Write logs at every iteration
-				summary_str = sess.run(merged_summary_op, feed_dict = {
-					y : y_batch,
-					a : a_batch,
-					self.input_layer : s_j_batch})
-				summary_writer.add_summary(summary_str, t)
-			# update the old values
-			self.communication.end_turn()
-			t += 1
-			# Save checkpoint each 100 steps
-			if t != 0 and t % 100 == 0:
-				self.save(checkpoint_dir, step)
-				f = open('t.pckl', 'wb')
-				pickle.dump(t, f)
-				f.close()
-				d = open('d.pckl', 'wb')
-				pickle.dump(D, d)
-				d.close()
-			# Show current progress
-			step = sess.run(self.step)
-			if t % 100 == 1:
-				print("Epoch: [%2d], player: %d time: %4.4f, epsilon: %.8f" % (t-old_t,self.situation.player_id, time.time() - start_time, epsilon))
+					## Observe the action and evaluate the result (Q function)
+						# check only if alive				
+					if not self.situation.is_player_piece(piece_id):
+						if action_done == ATTACK:
+							r_t[i] = -150 #not good to die during attack
+						elif action_done == CITY: 
+							r_t[i] = -1 #dying while taking a city is not really bad
+						else:
+							r_t[i] = -50 #dying by being attacked is bad 
+					else:
+						if action_done == ATTACK:
+							r_t[i] = 150 #winning an attack
+						elif action_done == CITY: 
+							r_t[i] = 10000 #taking a city
+						else:
+							r_t[i] = 1 #being alive 
+
+					self.situation.check()
+					chunks = self.situation.split(10)
+					# TODO : check if game ended
+					terminal = 0
+					
+					#state result
+					for j in range(len(chunks)):
+						s_t1[j] = s_t[j]
+					
+					# store the transition in D
+					D.append((s_t[i], a_t[i], r_t[i], s_t1[i], terminal))
+
+				if t> OBSERVE:
+					# sample a minibatch to train on
+					if BATCH < len(D):
+						minibatch = random.sample(D, BATCH)
+					else : 
+						try:
+							minibatch = random.sample(D,len(D))
+						except ValueError:
+							print("ValueError : sample population")
+							minibatch = random.sample(D,1)
+					# get the batch variables
+					s_j_batch = [d[0] for d in minibatch]
+					a_batch = [d[1] for d in minibatch]
+					r_batch = [d[2] for d in minibatch]
+					s_j1_batch = [d[3] for d in minibatch]
+					
+					y_batch = []
+					readout_j1_batch = self.readout.eval(feed_dict = {self.input_layer : s_j1_batch})
+					for i in range(0, len(minibatch)):
+					# if terminal only equals reward
+						if minibatch[i][4]:
+							y_batch.append(r_batch[i])
+						else:
+							y_batch.append(r_batch[i] + GAMMA * float(np.max(readout_j1_batch[i])))
+							
+					train_step.run(feed_dict = {
+						y : y_batch,
+						a : a_batch,
+						self.input_layer : s_j_batch})
+					# Write logs at every iteration
+					summary_str = sess.run(merged_summary_op, feed_dict = {
+						y : y_batch,
+						a : a_batch,
+						self.input_layer : s_j_batch})
+					summary_writer.add_summary(summary_str, t)
+				# update the old values
+				self.communication.end_turn()
+				t += 1
+				# Save checkpoint each 100 steps
+				if t != 0 and t % 100 == 0:
+					self.save(checkpoint_dir, step)
+					f = open('t.pckl', 'wb')
+					pickle.dump(t, f)
+					f.close()
+					d = open('d.pckl', 'wb')
+					pickle.dump(D, d)
+					d.close()
+				# Show current progress
+				step = sess.run(self.step)
+				if t % 100 == 1:
+					print("Epoch: [%2d], player: %d time: %4.4f, epsilon: %.8f" % (t-old_t,self.situation.player_id, time.time() - start_time, epsilon))
