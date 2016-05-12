@@ -80,7 +80,13 @@ class Situation(handler.Handler):
 
 	def get_enemy_cities(self):
 		return self.enemy_cities.values()
-		
+	
+	def get_enemy_cities_number(self):
+		return len(self.enemy_cities.values())
+	
+	def get_player_cities_number(self):
+		return len(self.enemy_cities.values())
+	
 	def split(self, size):
  		assert self.width % size == 0
  		assert self.height % size == 0
