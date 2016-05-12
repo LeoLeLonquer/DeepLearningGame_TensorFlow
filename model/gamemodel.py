@@ -119,6 +119,12 @@ class GameModel(Model):
 		cost = tf.reduce_mean(tf.square(y - readout_action))
 		train_step = tf.train.AdamOptimizer(learning_rate).minimize(cost)		
 
+		# Create a summary to monitor cost function
+		tf.scalar_summary("loss", cost)
+
+		# Merge all summaries to a single operator
+		merged_summary_op = tf.merge_all_summaries()
+		
 		# initialize all variables
 		tf.initialize_all_variables().run()
 		
@@ -313,6 +319,12 @@ class GameModel(Model):
 					y : y_batch,
 					a : a_batch,
 					self.input_layer : s_j_batch})
+				# Write logs at every iteration
+				summary_str = sess.run(merged_summary_op, feed_dict = {
+					y : y_batch,
+					a : a_batch,
+					self.input_layer : s_j_batch})
+				summary_writer.add_summary(summary_str, t)
 			# update the old values
 			self.communication.end_turn()
 			t += 1
