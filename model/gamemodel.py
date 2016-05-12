@@ -75,8 +75,8 @@ class GameModel(Model):
 		W_fc2 = tf.Variable(tf.truncated_normal([[144, ACTIONS], stddev = 0.01))
 		b_fc2 =  tf.Variable(tf.constant(0.01, shape = [ACTIONS]))
 		
-		W_fc1 = tf.Variable(tf.truncated_normal([144,144], stddev = 0.01)
-		b_fc1 =  tf.Variabletf.constant(0.01, shape = [144]))
+		W_fc1 = tf.Variable(tf.truncated_normal([144,144], stddev = 0.01))
+		b_fc1 =  tf.Variable(tf.constant(0.01, shape = [144]))
 		
 		# input layer
 		self.input_layer = tf.placeholder("float", [None, 10, 10, 4])
