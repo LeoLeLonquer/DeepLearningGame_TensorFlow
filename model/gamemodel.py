@@ -93,33 +93,7 @@ class GameModel(Model):
 		
 		# readout layer
 		self.readout = tf.matmul(self.h_fc1, W_fc2) + b_fc2
-	def get_model_dir(self):
-		return "Empire"
-
-	def save(self, checkpoint_dir, global_step=None):
-		print(" [*] Saving checkpoints...")
-		model_name = type(self).__name__ or "Reader"
-		model_dir = self.get_model_dir()
-
-		checkpoint_dir = os.path.join(checkpoint_dir, model_dir)
-		if not os.path.exists(checkpoint_dir):
-			os.makedirs(checkpoint_dir)
-		self.saver.save(self.sess, os.path.join(checkpoint_dir, model_name), global_step=global_step)
-
-	def load(self, checkpoint_dir):
-		print(" [*] Loading checkpoints...")
-		model_dir = self.get_model_dir()
-		checkpoint_dir = os.path.join(checkpoint_dir, model_dir)
-
-		ckpt = tf.train.get_checkpoint_state(checkpoint_dir)
-		if ckpt and ckpt.model_checkpoint_path:
-			ckpt_name = os.path.basename(ckpt.model_checkpoint_path)
-			self.saver.restore(self.sess, os.path.join(checkpoint_dir, ckpt_name))
-			print(" [*] Load SUCCESS")
-			return True
-		else:
-			print(" [!] Load failed...")
-			return False
+	
 	def play(self, learning_rate=0.001,
             checkpoint_dir="checkpoint",load=0):
 		"""
@@ -143,8 +117,7 @@ class GameModel(Model):
 		cost = tf.reduce_mean(tf.square(y - readout_action))
 		train_step = tf.train.AdamOptimizer(learning_rate).minimize(cost)		
 		
-		self.saver = tf.train.Saver()
-		
+		tf.initialize_all_variables().run()
 		init = tf.initialize_all_variables()
 		
 		# Create a summary to monitor cost function
