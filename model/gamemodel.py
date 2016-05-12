@@ -66,17 +66,17 @@ class GameModel(Model):
 
 	def build_model(self):
 		# network weights
-		W_conv1 = weight_variable([4, 4, 4, 16])
-		b_conv1 = bias_variable([16])
+		W_conv1 =  tf.Variable(tf.truncated_normal([4, 4, 4, 16], stddev = 0.01)) 
+		b_conv1 =  tf.Variable(tf.constant(0.01, shape = [16]))
 		
-		W_conv2 = weight_variable([3, 3, 16, 16])
-		b_conv2 = bias_variable([16])
+		W_conv2 = tf.Variable(tf.truncated_normal([3, 3, 16, 16], stddev = 0.01))
+		b_conv2 =  tf.Variable(tf.constant(0.01, shape = [16]))
 		
-		W_fc2 = weight_variable([144, ACTIONS])
-		b_fc2 = bias_variable([ACTIONS])
+		W_fc2 = tf.Variable(tf.truncated_normal([[144, ACTIONS], stddev = 0.01))
+		b_fc2 =  tf.Variable(tf.constant(0.01, shape = [ACTIONS]))
 		
-		W_fc1 = weight_variable([144, 144])
-		b_fc1 = bias_variable([144])
+		W_fc1 = tf.Variable(tf.truncated_normal([144,144], stddev = 0.01)
+		b_fc1 =  tf.Variabletf.constant(0.01, shape = [144]))
 		
 		# input layer
 		self.input_layer = tf.placeholder("float", [None, 10, 10, 4])
