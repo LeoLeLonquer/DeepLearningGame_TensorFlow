@@ -128,6 +128,9 @@ class GameModel(Model):
 		# initialize all variables
 		tf.initialize_all_variables().run()
 		
+		# Set logs writer into folder /tmp/tensorflow_logs
+		summary_writer = tf.train.SummaryWriter('/tmp/tensorflow_logs', graph_def=sess.graph_def)
+	
 		sess.run(self.step.assign(0))
 		
 		# loading networks
