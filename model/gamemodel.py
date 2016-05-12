@@ -130,8 +130,7 @@ class GameModel(Model):
 		summary_writer = tf.train.SummaryWriter('/tmp/tensorflow_logs', graph_def=sess.graph_def)
 	
 		# initialize all variables
-		init = tf.initialize_all_variables()
-		sess.run(init)
+		tf.initialize_all_variables().run()
 		
 		sess.run(self.step.assign(0))
 		
