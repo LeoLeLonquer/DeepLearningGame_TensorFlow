@@ -11,8 +11,6 @@ class Model(object):
 		return "Empire"
 
 	def save(self, checkpoint_dir, global_step=None):
-		self.saver = tf.train.Saver()
-
 		print(" [*] Saving checkpoints...")
 		model_name = type(self).__name__ or "Reader"
 		model_dir = self.get_model_dir()
@@ -23,8 +21,6 @@ class Model(object):
 		self.saver.save(self.sess, os.path.join(checkpoint_dir, model_name), global_step=global_step)
 
 	def load(self, checkpoint_dir):
-		self.saver = tf.train.Saver()
-
 		print(" [*] Loading checkpoints...")
 		model_dir = self.get_model_dir()
 		checkpoint_dir = os.path.join(checkpoint_dir, model_dir)

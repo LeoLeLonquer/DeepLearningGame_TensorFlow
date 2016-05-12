@@ -117,6 +117,8 @@ class GameModel(Model):
 		cost = tf.reduce_mean(tf.square(y - readout_action))
 		train_step = tf.train.AdamOptimizer(learning_rate).minimize(cost)		
 		
+		self.saver = tf.train.Saver()
+		
 		init = tf.initialize_all_variables()
 		
 		# Create a summary to monitor cost function
