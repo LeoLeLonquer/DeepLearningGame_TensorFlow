@@ -80,6 +80,9 @@ class Situation(handler.Handler):
 
 	def get_enemy_cities(self):
 		return self.enemy_cities.values()
+		
+	def get_free_cities_number(self):
+		return len(self.enemy_cities.values())
 	
 	def get_enemy_cities_number(self):
 		return len(self.enemy_cities.values())

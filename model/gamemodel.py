@@ -32,7 +32,7 @@ EXPLORE = 2500 # frames over which to anneal epsilon
 GAMMA = 0.99 # decay rate of past observations
 REPLAY_MEMORY = 100 # number of previous transitions to remember
 MAX_SIZE_DEQUE = 10000
-BATCH = 40 # size of minibatch
+BATCH = 70 # size of minibatch
 NB_CHUNK = 16
 size = 10 #split(size)
 
@@ -121,7 +121,7 @@ class GameModel(Model):
 		init = tf.initialize_all_variables()
 		
 		# Create a summary to monitor cost function
-		tf.scalar_summary("loss", cost)
+		tf.scalar_summary("Loss", cost)
 
 		# Merge all summaries to a single operator
 		merged_summary_op = tf.merge_all_summaries()
@@ -173,8 +173,15 @@ class GameModel(Model):
 			a_t = [[None]*ACTIONS]*NB_CHUNK # vector of vector which contain the executed action
 			r_t = [None]*NB_CHUNK
 			
+			is_city_took = False
 			
 			while 1:
+				# not good if enneemy has taken a city
+				ennemy_city = self.situation.get_enemy_cities_number()
+				free_city = self.situation.get_free_cities_number()
+				player_city = self.situation.get_player_cities_number()
+				
+				is_city_took = False
 				self.communication.wait()
 				
 				self.situation.check()
@@ -240,6 +247,7 @@ class GameModel(Model):
 								if self.situation.is_tile_free_city(next_location) or self.situation.is_tile_enemy_city(next_location):
 									readout_t[i][dir]= 1 # we take it
 									action_done = CITY
+									is_city_took = True
 								elif self.situation.is_tile_enemy_piece(next_location):
 									readout_t[i][dir]=float(readout_t[i][dir])*1.5 # TODO update with kind of troops
 									action_done = ATTACK
