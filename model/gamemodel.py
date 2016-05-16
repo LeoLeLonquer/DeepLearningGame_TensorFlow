@@ -256,11 +256,11 @@ class GameModel(Model):
 									readout_t[i][dir]=float(readout_t[i][dir])*1.5 # TODO update with kind of troops
 									action_done = ATTACK
 								elif self.situation.is_tile_player_piece(next_location):
-									readout_t[i][dir]=np.finfo(np.float32).min
+									readout_t[i][dir]= np.finfo(np.float32).min + 10000
 									
 							else:
 								# can't play this directions
-								readout_t[i][dir] = np.finfo(np.float32).min
+								readout_t[i][dir] = np.finfo(np.float32).min + 10000
 						if len(result)>0:		
 							if random.random() <= epsilon or t <= OBSERVE:
 								direction = random.choice(result) # choose the one gave by the output_vector x ProbaVector
