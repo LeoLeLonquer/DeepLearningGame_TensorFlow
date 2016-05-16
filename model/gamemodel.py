@@ -161,10 +161,9 @@ class GameModel(Model):
 			
 			old_t = t
 			
-			epsilon = INITIAL_EPSILON
-			for x in range(t):
-				if epsilon > FINAL_EPSILON:
-					epsilon -= (INITIAL_EPSILON - FINAL_EPSILON) / EXPLORE
+			epsilon = INITIAL_EPSILON - t*(INITIAL_EPSILON - FINAL_EPSILON) / EXPLORE
+			if epsilon < FINAL_EPSILON:
+				epsilon = FINAL_EPSILON			
 			
 			#Static allocation to be safe
 			readout_t = [None]*NB_CHUNK
@@ -173,16 +172,24 @@ class GameModel(Model):
 			a_t = [[None]*ACTIONS]*NB_CHUNK # vector of vector which contain the executed action
 			r_t = [None]*NB_CHUNK
 			
-			is_city_took = False
+			player_city = self.situation.get_player_cities_number()
 			
 			while 1:
-				# not good if enneemy has taken a city
-				ennemy_city = self.situation.get_enemy_cities_number()
-				free_city = self.situation.get_free_cities_number()
-				player_city = self.situation.get_player_cities_number()
-				
-				is_city_took = False
 				self.communication.wait()
+				
+				# not good if ennemy has taken a city
+				last_player_city = self.situation.get_player_cities_number()
+				
+				#If we've lost a city
+				if last_player_city - player_city < 0:
+					for i in range(len(piece_ids)):
+						elem = D.pop()
+						# code : D.append((s_t[i], a_t[i], r_t[i], s_t1[i], terminal))
+						elem[2] = -10000
+						D.append(elem)
+				
+				#Update for next turn
+				player_city = last_player_city 
 				
 				self.situation.check()
 				chunks = self.situation.split(10)
@@ -220,7 +227,7 @@ class GameModel(Model):
 				# scale down epsilon
 				if epsilon > FINAL_EPSILON:
 					epsilon -= (INITIAL_EPSILON - FINAL_EPSILON) / EXPLORE
-			
+				
 				# play actions
 				piece_ids = self.situation.player_pieces.keys()
 				if t % 20 == 0:
@@ -245,9 +252,8 @@ class GameModel(Model):
 								action_done = ELSE #at startup
 								#print("Readout_t : {}".format(readout_t[i]))
 								if self.situation.is_tile_free_city(next_location) or self.situation.is_tile_enemy_city(next_location):
-									readout_t[i][dir]= 1 # we take it
+									readout_t[i][dir]= 100 # we take it
 									action_done = CITY
-									is_city_took = True
 								elif self.situation.is_tile_enemy_piece(next_location):
 									readout_t[i][dir]=float(readout_t[i][dir])*1.5 # TODO update with kind of troops
 									action_done = ATTACK
@@ -269,38 +275,40 @@ class GameModel(Model):
 								action_index = np.nanargmax(readout_t[i]) #this gets only the best action_index
 								a_t[i] = readout_t[i]
 								#print("Action[{}] : {}".format(action_index,a_t[i]))
-								if action_index != 6:
+								if action_index != 6: #action_index 6 is not moving
 									self.communication.action("move %d %d" % (piece_id, action_index))
 						depth = depth - 1
 						
-					## Observe the action and evaluate the result (Q function)
-						# check only if alive				
-					if not self.situation.is_player_piece(piece_id):
-						if action_done == ATTACK:
-							r_t[i] = -150 #not good to die during attack
-						elif action_done == CITY: 
-							r_t[i] = -1 #dying while taking a city is not really bad
+						## Observe the action and evaluate the result (Q function)
+							# check only if alive				
+						if not self.situation.is_player_piece(piece_id):
+							if action_done == ATTACK:
+								r_t[i] = -150 #not good to die during attack
+							elif action_done == CITY: 
+								r_t[i] = -1 #dying while taking a city is not really bad
+							else:
+								r_t[i] = -50 #dying by being attacked is bad 
 						else:
-							r_t[i] = -50 #dying by being attacked is bad 
-					else:
-						if action_done == ATTACK:
-							r_t[i] = 150 #winning an attack
-						elif action_done == CITY: 
-							r_t[i] = 10000 #taking a city
-						else:
-							r_t[i] = 1 #being alive 
+							if action_done == ATTACK:
+								r_t[i] = 150 #winning an attack
+							elif action_done == CITY: 
+								r_t[i] = 10000 #taking a city
+								else:
+								r_t[i] = 1 #being alive 
 
-					self.situation.check()
-					chunks = self.situation.split(10)
-					# TODO : check if game ended
-					terminal = 0
-					
-					#state result
-					for j in range(len(chunks)):
-						s_t1[j] = s_t[j]
-					
-					# store the transition in D
-					D.append((s_t[i], a_t[i], r_t[i], s_t1[i], terminal))
+						self.situation.check()
+						chunks = self.situation.split(10)
+						# TODO : check if game ended
+						terminal = 0
+						
+						#state result
+						#TODO 
+						s_t1[i] =  np.append(chunks[i], s_t[i][:,:,1:], axis = 2) 
+						
+						# store the transition in D
+						D.append((s_t[i], a_t[i], r_t[i], s_t1[i], terminal))
+						if len(D) > REPLAY_MEMORY
+							D.popleft()
 
 				if t> OBSERVE:
 					# sample a minibatch to train on
