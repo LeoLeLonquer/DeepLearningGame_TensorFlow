@@ -201,9 +201,6 @@ class GameModel(Model):
 				s_t[i] = np.stack((chunk , chunk , chunk ,chunk ), axis = 2)
 			init = 0
 			while 1:
-				
-				#evaluate with current model 
-				readout_t[i] = self.readout.eval(feed_dict = {self.input_layer : [s_t[i]]})[0]
 				if init:
 					self.communication.wait()
 				init = 1
@@ -239,6 +236,7 @@ class GameModel(Model):
 					depth = self.situation.piece_types[piece.piece_type_id].speed
 					#find good chunk
 					i = self.situation.split_int(size,piece_id)
+					readout_t[i] = self.readout.eval(feed_dict = {self.input_layer : [s_t[i]]})[0]
 					while depth > 0 and self.situation.is_player_piece(piece_id):
 						# check in the vector the best choice
 						directions = algos.directions
