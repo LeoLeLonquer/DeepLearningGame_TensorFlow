@@ -174,6 +174,8 @@ class GameModel(Model):
 			
 			player_city = self.situation.get_player_cities_number()
 			
+			self.communication.wait()
+			
 			self.situation.check()
 			chunks = self.situation.split(10)
 			
