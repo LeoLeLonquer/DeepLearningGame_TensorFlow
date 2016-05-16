@@ -172,11 +172,10 @@ class GameModel(Model):
 			a_t = [[None]*ACTIONS]*NB_CHUNK # vector of vector which contain the executed action
 			r_t = [None]*NB_CHUNK
 			
-			player_city = self.situation.get_player_cities_number()
-			
 			self.communication.wait()
 			
 			self.situation.check()
+			player_city = self.situation.get_player_cities_number()
 			chunks = self.situation.split(10)
 			
 			for i in range(len(chunks)):
@@ -199,6 +198,7 @@ class GameModel(Model):
 								else:
 									chunk[q][r] = 6 + chunk[q][r].content.piece_type_id + chunk[q][r].content.owner * len(self.situation.piece_types)
 				s_t[i] = np.stack((chunk , chunk , chunk ,chunk ), axis = 2)
+				print s_t[i]
 			init = 0
 			while 1:
 				if init:
