@@ -302,10 +302,8 @@ class GameModel(Model):
 						terminal = 0
 						
 						#state result
-						#TODO 
-						chunks[i] = np.reshape(chunks[i],(10,10,1))
-						print(chunks[i])
-						s_t1[i] =  np.append(chunks[i], s_t[i][:,:,1:], axis = 2) 
+						#TODO
+						s_t1[i] =  np.append(chunk, s_t[i][:,:,1:], axis = 2) 
 						
 						# store the transition in D
 						D.append((s_t[i], a_t[i], r_t[i], s_t1[i], terminal))
