@@ -318,9 +318,9 @@ class GameModel(Model):
 											else:
 												chunk[q][r] = 6 + chunk[q][r].content.piece_type_id + chunk[q][r].content.owner * len(self.situation.piece_types)
 							chunk = np.reshape(chunk,(10,10))
-							print(chunk)
+							print("chunk[{}] : {} (t = {})".format(k,chunk,t))
 							s_t1[i] =  np.append(chunk, s_t[i][:,:,1:], axis = 2) 
-						# TODO : check if game ended
+						# TODO : check if game end
 						terminal = 0						
 						
 						# store the transition in D
