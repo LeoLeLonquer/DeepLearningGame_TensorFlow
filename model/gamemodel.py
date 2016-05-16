@@ -174,6 +174,8 @@ class GameModel(Model):
 			
 			player_city = self.situation.get_player_cities_number()
 			
+			chunks = self.situation.split(10)
+			
 			for i in range(len(chunks)):
 				chunk = chunks[i]
 				for q in range(len(chunk)):
