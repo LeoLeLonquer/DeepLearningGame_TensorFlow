@@ -325,7 +325,6 @@ class GameModel(Model):
 						
 						# store the transition in D
 						D.append((s_t[i], a_t[i], r_t[i], s_t1[i], terminal))
-						s_t[i] = s_t1[i]
 						if len(D) > REPLAY_MEMORY:
 							D.popleft()
 
@@ -366,6 +365,8 @@ class GameModel(Model):
 					summary_writer.add_summary(summary_str, t)
 				# update the old values
 				self.communication.end_turn()
+				for j in range(len(chunks))
+					s_t[j] = s_t1[j]
 				t += 1
 				# Save checkpoint each 100 steps
 				if t != 0 and t % 100 == 0:
