@@ -319,12 +319,10 @@ class GameModel(Model):
 												chunk[q][r] = 6 + chunk[q][r].content.piece_type_id + chunk[q][r].content.owner * len(self.situation.piece_types)
 							print("chunk[{}] : {} (t = {})".format(k,chunk,t))
 							print("s_t[{}][:,:,1:] = ".format(i,s_t[i][:,:,1:]))
-							s_t1[i] =  np.append(chunk, s_t[i][:,:,1:], axis = 2) 
+							s_t1[k] =  np.append(chunk, s_t[k][:,:,1:], axis = 2) 
 						# TODO : check if game end
 						terminal = 0						
 						
-						for j in range(NB_CHUNK):
-							s_t[j] = s_t1[j]
 						# store the transition in D
 						D.append((s_t[i], a_t[i], r_t[i], s_t1[i], terminal))
 						if len(D) > REPLAY_MEMORY:
