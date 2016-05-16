@@ -79,7 +79,7 @@ class GameModel(Model):
 		b_fc1 = bias_variable([144])
 		
 		# input layer
-		self.input_layer = tf.placeholder(tf.uint16, [None, 10, 10, 4])
+		self.input_layer = tf.placeholder("float", [None, 10, 10, 4])
 
 		# hidden layers
 		h_conv1 = tf.nn.relu(conv2d(self.input_layer, W_conv1, 2) + b_conv1)
@@ -110,8 +110,8 @@ class GameModel(Model):
 		new_value = tf.add(self.step, one)
 		update = tf.assign(self.step, new_value)
 		
-		a = tf.placeholder(tf.uint16, [None, ACTIONS])
-		y = tf.placeholder(tf.uint16, [None])
+		a = tf.placeholder("float", [None, ACTIONS])
+		y = tf.placeholder("float", [None])
 		
 		readout_action = tf.reduce_sum(tf.mul(self.readout, a), reduction_indices = 1)
 		cost = tf.reduce_mean(tf.square(y - readout_action))
@@ -256,11 +256,11 @@ class GameModel(Model):
 									readout_t[i][dir]=float(readout_t[i][dir])*1.5 # TODO update with kind of troops
 									action_done = ATTACK
 								elif self.situation.is_tile_player_piece(next_location):
-									readout_t[i][dir]=0
+									readout_t[i][dir]=np.finfo(np.float32).min
 									
 							else:
 								# can't play this directions
-								readout_t[i][dir] = 0
+								readout_t[i][dir] = np.finfo(np.float32).min
 						if len(result)>0:		
 							if random.random() <= epsilon or t <= OBSERVE:
 								direction = random.choice(result) # choose the one gave by the output_vector x ProbaVector
