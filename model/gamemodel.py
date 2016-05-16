@@ -208,7 +208,7 @@ class GameModel(Model):
 				
 				#If we've lost a city
 				if last_player_city - player_city < 0:
-					for i in range(len(piece_ids)):
+					for _i in range(len(piece_ids)):
 						elem = D.pop()
 						# code : D.append((s_t[i], a_t[i], r_t[i], s_t1[i], terminal))
 						elem = list(elem)
@@ -266,13 +266,10 @@ class GameModel(Model):
 								direction = random.choice(result) # choose the one gave by the output_vector x ProbaVector
 								a_t[i] = np.zeros(ACTIONS)
 								a_t[i][direction] = 1
-								#print("Result : {}".format(result))
-								#print("Action[{}] : {}".format(direction,a_t[i]))
 								self.communication.action("move %d %d" % (piece_id, direction))
 							else:
 								action_index = np.nanargmax(readout_t[i]) #this gets only the best action_index
 								a_t[i] = readout_t[i]
-								#print("Action[{}] : {}".format(action_index,a_t[i]))
 								if action_index != 6: #action_index 6 is not moving
 									self.communication.action("move %d %d" % (piece_id, action_index))
 						depth = depth - 1
@@ -316,10 +313,8 @@ class GameModel(Model):
 												chunk[q][r] = 4 + chunk[q][r].content.owner # 4 et 5 !!!
 											else:
 												chunk[q][r] = 6 + chunk[q][r].content.piece_type_id + chunk[q][r].content.owner * len(self.situation.piece_types)
-							#print("s_t[{}] = {}".format(k,s_t[k]))
-							print("chunk[0] : {} (t = {})".format(chunks[0],t))
-							s_t1[k] =  np.append(chunk, s_t[k][:,:,1:], axis = 2) 
-						print("chunk[0] : {} (t = {})".format(chunks[0],t))
+							chunk = np.reshape(chunk,(10,10,1))
+							s_t1[k] =  np.append(chunk, s_t[k][:,:,1:], axis = 2)
 						# TODO : check if game end
 						terminal = 0						
 						
