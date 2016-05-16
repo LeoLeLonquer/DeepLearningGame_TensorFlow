@@ -317,8 +317,8 @@ class GameModel(Model):
 												chunk[q][r] = 4 + chunk[q][r].content.owner # 4 et 5 !!!
 											else:
 												chunk[q][r] = 6 + chunk[q][r].content.piece_type_id + chunk[q][r].content.owner * len(self.situation.piece_types)
-							#chunk = np.reshape(chunk,(10,10))
 							print("chunk[{}] : {} (t = {})".format(k,chunk,t))
+							print("s_t[{}][:,:,1:] = ".format(i,s_t[i][:,:,1:]))
 							s_t1[i] =  np.append(chunk, s_t[i][:,:,1:], axis = 2) 
 						# TODO : check if game end
 						terminal = 0						
