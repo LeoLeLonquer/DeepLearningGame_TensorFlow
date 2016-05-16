@@ -365,7 +365,7 @@ class GameModel(Model):
 					summary_writer.add_summary(summary_str, t)
 				# update the old values
 				self.communication.end_turn()
-				for j in range(len(chunks)):
+				for j in range(NB_CHUNK):
 					s_t[j] = s_t1[j]
 				t += 1
 				# Save checkpoint each 100 steps
