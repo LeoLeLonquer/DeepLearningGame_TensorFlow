@@ -323,6 +323,8 @@ class GameModel(Model):
 						# TODO : check if game end
 						terminal = 0						
 						
+						for j in range(NB_CHUNK):
+							s_t[j] = s_t1[j]
 						# store the transition in D
 						D.append((s_t[i], a_t[i], r_t[i], s_t1[i], terminal))
 						if len(D) > REPLAY_MEMORY:
@@ -365,8 +367,6 @@ class GameModel(Model):
 					summary_writer.add_summary(summary_str, t)
 				# update the old values
 				self.communication.end_turn()
-				for j in range(NB_CHUNK):
-					s_t[j] = s_t1[j]
 				t += 1
 				# Save checkpoint each 100 steps
 				if t != 0 and t % 100 == 0:
