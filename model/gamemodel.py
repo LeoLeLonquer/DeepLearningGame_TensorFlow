@@ -174,7 +174,31 @@ class GameModel(Model):
 			
 			player_city = self.situation.get_player_cities_number()
 			
+			for i in range(len(chunks)):
+				chunk = chunks[i]
+				for q in range(len(chunk)):
+					for r in range(len(chunk[q])):
+						if chunk[q][r].visible == False:
+							chunk[q][r] = 0
+						else:
+							if chunk[q][r].content == None:
+								if chunk[q][r].terrain == ssituation.Situation.GROUND:
+									chunk[q][r] = 1
+								else:
+									chunk[q][r] = 2
+							else:
+								if isinstance(chunk[q][r].content, ssituation.City):
+									chunk[q][r] = 3
+								elif isinstance(chunk[q][r].content, ssituation.OwnedCity):
+									chunk[q][r] = 4 + chunk[q][r].content.owner # 4 et 5 !!!
+								else:
+									chunk[q][r] = 6 + chunk[q][r].content.piece_type_id + chunk[q][r].content.owner * len(self.situation.piece_types)
+				s_t[i] = np.stack((chunk , chunk , chunk ,chunk ), axis = 2)
+				
 			while 1:
+				#evaluate with current model 
+				readout_t[i] = self.readout.eval(feed_dict = {self.input_layer : [s_t[i]]})[0]
+				
 				self.communication.wait()
 				
 				# not good if ennemy has taken a city
@@ -192,37 +216,10 @@ class GameModel(Model):
 				player_city = last_player_city 
 				
 				self.situation.check()
-				chunks = self.situation.split(10)
 				
 				#TODO : maybe select good troops ->
 				for city_id in self.situation.player_cities:
 					think.choose_relevant_random_production(self.situation, self.communication, city_id)
-					
-				for i in range(len(chunks)):
-					chunk = chunks[i]
-					
-					for q in range(len(chunk)):
-						for r in range(len(chunk[q])):
-							if chunk[q][r].visible == False:
-								chunk[q][r] = 0
-							else:
-								if chunk[q][r].content == None:
-									if chunk[q][r].terrain == ssituation.Situation.GROUND:
-										chunk[q][r] = 1
-									else:
-										chunk[q][r] = 2
-								else:
-									if isinstance(chunk[q][r].content, ssituation.City):
-										chunk[q][r] = 3
-									elif isinstance(chunk[q][r].content, ssituation.OwnedCity):
-										chunk[q][r] = 4 + chunk[q][r].content.owner # 4 et 5 !!!
-									else:
-										chunk[q][r] = 6 + chunk[q][r].content.piece_type_id + chunk[q][r].content.owner * len(self.situation.piece_types)
-					#print chunk
-					s_t[i] = chunk #TODO : update ?
-					s_t[i] = np.stack((s_t[i] , s_t[i] , s_t[i] ,s_t[i] ), axis = 2)
-					#evaluate with current model 
-					readout_t[i] = self.readout.eval(feed_dict = {self.input_layer : [s_t[i]]})[0]
 				
 				# scale down epsilon
 				if epsilon > FINAL_EPSILON:
@@ -298,14 +295,33 @@ class GameModel(Model):
 
 						self.situation.check()
 						chunks = self.situation.split(10)
-						# TODO : check if game ended
-						terminal = 0
-						
-						#state result
-						#TODO 
+				
+						for k in range(len(chunks)):
+							chunk = chunks[k]
+							
+							for q in range(len(chunk)):
+								for r in range(len(chunk[q])):
+									if chunk[q][r].visible == False:
+										chunk[q][r] = 0
+									else:
+										if chunk[q][r].content == None:
+											if chunk[q][r].terrain == ssituation.Situation.GROUND:
+												chunk[q][r] = 1
+											else:
+												chunk[q][r] = 2
+										else:
+											if isinstance(chunk[q][r].content, ssituation.City):
+												chunk[q][r] = 3
+											elif isinstance(chunk[q][r].content, ssituation.OwnedCity):
+												chunk[q][r] = 4 + chunk[q][r].content.owner # 4 et 5 !!!
+											else:
+												chunk[q][r] = 6 + chunk[q][r].content.piece_type_id + chunk[q][r].content.owner * len(self.situation.piece_types)
 						chunk = np.reshape(chunk,(10,10,1))
 						print(chunk)
 						s_t1[i] =  np.append(chunk, s_t[i][:,:,1:], axis = 2) 
+					
+						# TODO : check if game ended
+						terminal = 0						
 						
 						# store the transition in D
 						D.append((s_t[i], a_t[i], r_t[i], s_t1[i], terminal))
@@ -349,6 +365,7 @@ class GameModel(Model):
 					summary_writer.add_summary(summary_str, t)
 				# update the old values
 				self.communication.end_turn()
+				s_t = s_t1
 				t += 1
 				# Save checkpoint each 100 steps
 				if t != 0 and t % 100 == 0:
