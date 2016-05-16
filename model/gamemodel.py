@@ -307,7 +307,7 @@ class GameModel(Model):
 						
 						# store the transition in D
 						D.append((s_t[i], a_t[i], r_t[i], s_t1[i], terminal))
-						if len(D) > REPLAY_MEMORY
+						if len(D) > REPLAY_MEMORY:
 							D.popleft()
 
 				if t> OBSERVE:
