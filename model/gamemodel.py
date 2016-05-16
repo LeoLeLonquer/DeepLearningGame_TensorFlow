@@ -199,13 +199,14 @@ class GameModel(Model):
 								else:
 									chunk[q][r] = 6 + chunk[q][r].content.piece_type_id + chunk[q][r].content.owner * len(self.situation.piece_types)
 				s_t[i] = np.stack((chunk , chunk , chunk ,chunk ), axis = 2)
-				
+			init = 0
 			while 1:
+				
 				#evaluate with current model 
 				readout_t[i] = self.readout.eval(feed_dict = {self.input_layer : [s_t[i]]})[0]
-				
-				self.communication.wait()
-				
+				if init:
+					self.communication.wait()
+				init = 1
 				# not good if ennemy has taken a city
 				last_player_city = self.situation.get_player_cities_number()
 				
