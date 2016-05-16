@@ -174,6 +174,7 @@ class GameModel(Model):
 			
 			player_city = self.situation.get_player_cities_number()
 			
+			self.situation.check()
 			chunks = self.situation.split(10)
 			
 			for i in range(len(chunks)):
@@ -216,8 +217,6 @@ class GameModel(Model):
 				
 				#Update for next turn
 				player_city = last_player_city 
-				
-				self.situation.check()
 				
 				#TODO : maybe select good troops ->
 				for city_id in self.situation.player_cities:
