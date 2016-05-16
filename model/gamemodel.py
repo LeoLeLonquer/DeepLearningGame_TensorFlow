@@ -293,7 +293,7 @@ class GameModel(Model):
 								r_t[i] = 150 #winning an attack
 							elif action_done == CITY: 
 								r_t[i] = 10000 #taking a city
-								else:
+							else:
 								r_t[i] = 1 #being alive 
 
 						self.situation.check()
