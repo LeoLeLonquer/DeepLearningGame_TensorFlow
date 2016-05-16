@@ -215,7 +215,6 @@ class GameModel(Model):
 						elem = list(elem)
 						elem[2] = -10000
 						D.append(elem)
-				
 				#Update for next turn
 				player_city = last_player_city 
 				
@@ -319,7 +318,7 @@ class GameModel(Model):
 												chunk[q][r] = 4 + chunk[q][r].content.owner # 4 et 5 !!!
 											else:
 												chunk[q][r] = 6 + chunk[q][r].content.piece_type_id + chunk[q][r].content.owner * len(self.situation.piece_types)
-						chunk = np.reshape(chunk,(10,10,1))
+						#chunk = np.reshape(chunk,(10,10,1))
 						print(chunk)
 						s_t1[i] =  np.append(chunk, s_t[i][:,:,1:], axis = 2) 
 					
