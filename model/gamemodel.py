@@ -198,7 +198,6 @@ class GameModel(Model):
 								else:
 									chunk[q][r] = 6 + chunk[q][r].content.piece_type_id + chunk[q][r].content.owner * len(self.situation.piece_types)
 				s_t[i] = np.stack((chunk , chunk , chunk ,chunk ), axis = 2)
-				print("INIT s_t[{}] = {}".format(i,s_t[i]))
 			init = 0  
 			while 1:
 				if init:
