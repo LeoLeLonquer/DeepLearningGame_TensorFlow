@@ -197,10 +197,9 @@ class GameModel(Model):
 									chunk[q][r] = 4 + chunk[q][r].content.owner # 4 et 5 !!!
 								else:
 									chunk[q][r] = 6 + chunk[q][r].content.piece_type_id + chunk[q][r].content.owner * len(self.situation.piece_types)
-				s_t[i] = chunk
-				s_t[i] = np.stack((s_t[i] , s_t[i] , s_t[i] ,s_t[i] ), axis = 2)
-				print s_t[i]
-			init = 0
+				s_t[i] = np.stack((chunk , chunk , chunk ,chunk ), axis = 2)
+				print("s_t[{}] = {}".format(t,s_t[i]))
+			init = 0  
 			while 1:
 				if init:
 					self.communication.wait()
