@@ -212,6 +212,7 @@ class GameModel(Model):
 					for i in range(len(piece_ids)):
 						elem = D.pop()
 						# code : D.append((s_t[i], a_t[i], r_t[i], s_t1[i], terminal))
+						elem = list(elem)
 						elem[2] = -10000
 						D.append(elem)
 				
