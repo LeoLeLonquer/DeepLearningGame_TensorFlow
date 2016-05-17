@@ -266,6 +266,7 @@ class GameModel(Model):
 						
 						#Bonus / Malus sur occupation de la carte
 						last_occupation = self.situation.get_occupation_player()
+						print last_occupation
 						if last_occupation - occupation < 0:
 							bonus = -10
 						else:
