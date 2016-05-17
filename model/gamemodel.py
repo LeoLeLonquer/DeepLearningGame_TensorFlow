@@ -171,6 +171,7 @@ class GameModel(Model):
 			s_t1 = [None]*NB_CHUNK
 			a_t = [[None]*ACTIONS]*NB_CHUNK # vector of vector which contain the executed action
 			r_t = [None]*NB_CHUNK
+			action_done = None
 			
 			self.communication.wait()
 			
@@ -178,6 +179,7 @@ class GameModel(Model):
 			player_city = self.situation.get_player_cities_number()
 			chunks = self.situation.split(10)
 			
+			occupation = self.situation.get_occupation_player()
 			for i in range(len(chunks)):
 				chunk = chunks[i]
 				for q in range(len(chunk)):
@@ -261,6 +263,14 @@ class GameModel(Model):
 							else:
 								# can't play this directions
 								readout_t[i][dir] = - 1000000
+						
+						#Bonus / Malus sur occupation de la carte
+						last_occupation = self.situation.get_occupation_player()
+						if last_occupation - occupation < 0:
+							bonus = -10
+						else:
+							bonus = 10
+						
 						if len(result)>0:		
 							if random.random() <= epsilon or t <= OBSERVE:
 								direction = random.choice(result) # choose the one gave by the output_vector x ProbaVector
@@ -293,7 +303,8 @@ class GameModel(Model):
 								r_t[i] = 10000 #taking a city
 							else:
 								r_t[i] = 1 #being alive 
-
+						#Bonus application
+						r_t[i] += bonus
 						self.situation.check()
 						chunks = self.situation.split(10)
 				

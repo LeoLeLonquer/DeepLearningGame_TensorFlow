@@ -99,7 +99,15 @@ class Situation(handler.Handler):
  				chunk = [ self.view[qi * size + q][(ri * size):((ri + 1) * size)] for q in range(size) ]
  				result.append(chunk)
  		return result
- 	
+		
+	def get_occupation_player():
+		res = 0
+		for qi in range(self.width / size):
+ 			for ri in range(self.height / size):
+				if self.is_tile_player_piece([qi,ri]):
+						res += 1
+		return res	
+	
  	def split_int(self, size,piece_id):
  		assert self.width % size == 0
  		assert self.height % size == 0
