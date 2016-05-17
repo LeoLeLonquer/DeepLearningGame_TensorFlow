@@ -82,13 +82,13 @@ class Situation(handler.Handler):
 		return self.enemy_cities.values()
 		
 	def get_free_cities_number(self):
-		return len(self.enemy_cities.values())
+		return len(self.free_cities.values())
 	
 	def get_enemy_cities_number(self):
 		return len(self.enemy_cities.values())
 	
 	def get_player_cities_number(self):
-		return len(self.enemy_cities.values())
+		return len(self.player_cities.values())
 	
 	def split(self, size):
  		assert self.width % size == 0
