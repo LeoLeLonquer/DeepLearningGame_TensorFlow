@@ -102,8 +102,8 @@ class Situation(handler.Handler):
 		
 	def get_occupation_player(self):
 		res = 0
-		for qi in range(self.width / size):
- 			for ri in range(self.height / size):
+		for qi in range(self.width):
+ 			for ri in range(self.height):
 				if self.is_tile_player_piece([qi,ri]):
 						res += 1
 		return res	
