@@ -231,7 +231,7 @@ class GameModel(Model):
 				# play actions
 				piece_ids = self.situation.player_pieces.keys()
 				if t % 20 == 0:
-					print("Nb piece [{}] : {}".format(t-old_t,len(piece_ids)))
+					print("Nb piece [{}] : {} - Nb ville : {}".format(t-old_t,len(piece_ids),len(self.situation.get_player_cities())))
 				for piece_id in piece_ids:
 					#while can go further
 					piece = self.situation.player_pieces[piece_id]
