@@ -27,13 +27,14 @@ debug = tools.debug
 FINAL_EPSILON = 0.05 # final value of epsilon
 INITIAL_EPSILON = 1.0 # starting value of epsilon
 ACTIONS = 7 # number of valid actions
-OBSERVE = 50 # timesteps to observe before training
-EXPLORE = 2500 # frames over which to anneal epsilon
+OBSERVE = 400 # timesteps to observe before training
+EXPLORE = 5000 # frames over which to anneal epsilon
 GAMMA = 0.99 # decay rate of past observations
 REPLAY_MEMORY = 590000  # number of previous transitions to remember
 MAX_SIZE_DEQUE = 10000
-BATCH = 70 # size of minibatch
-NB_CHUNK = 16
+BATCH = 100 # size of minibatch
+BATCH = 100 # size of minibatch
+NB_CHUNK = 9
 size = 10 #split(size)
 
 CITY = 0
@@ -266,7 +267,6 @@ class GameModel(Model):
 						
 						#Bonus / Malus sur occupation de la carte
 						last_occupation = self.situation.get_occupation_player()
-						print last_occupation
 						if last_occupation - occupation < 0:
 							bonus = -10
 						else:
