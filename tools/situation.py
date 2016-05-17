@@ -100,7 +100,7 @@ class Situation(handler.Handler):
  				result.append(chunk)
  		return result
 		
-	def get_occupation_player():
+	def get_occupation_player(self):
 		res = 0
 		for qi in range(self.width / size):
  			for ri in range(self.height / size):
