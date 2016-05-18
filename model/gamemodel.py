@@ -253,7 +253,7 @@ class GameModel(Model):
 								action_done = ELSE #at startup
 								#print("Readout_t : {}".format(readout_t[i]))
 								if self.situation.is_tile_free_city(next_location) or self.situation.is_tile_enemy_city(next_location):
-									readout_t[i][dir]= 100 # we take it
+									readout_t[i][dir]= 100000 # we take it
 									action_done = CITY
 								elif self.situation.is_tile_enemy_piece(next_location):
 									readout_t[i][dir]=float(readout_t[i][dir])*1.5 # TODO update with kind of troops
