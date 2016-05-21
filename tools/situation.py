@@ -112,7 +112,7 @@ class Situation(handler.Handler):
 		res = 0
 		for qi in range(self.width):
  			for ri in range(self.height):
-				if self.view[qi][ri].content == None
+				if self.view[qi][ri].content == None:
 						res += 1
 		return res	
 		
