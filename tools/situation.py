@@ -114,7 +114,7 @@ class Situation(handler.Handler):
  			for ri in range(self.height):
 				if self.view[qi][ri].content == None:
 						res += 1
-		return res	
+		return self.width*self.height - res	
 		
  	def split_int(self, size,piece_id):
  		assert self.width % size == 0
