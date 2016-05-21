@@ -229,7 +229,7 @@ class GameModel(Model):
 				
 				# play actions
 				piece_ids = self.situation.player_pieces.keys()
-				ecart = np.amax((readout_t[i]) - np.amin(readout_t[i]) for i in range(NB_CHUNK))
+				ecart = np.amax(np.amax(readout_t[i]) - np.amin(readout_t[i]) for i in range(NB_CHUNK))
 				if t % 20 == 0:
 					print("Nb piece [{}] : {} - Nb ville alies: {} / {} - Nb ville ennemie : {} - Ecart : {} - Explo : {}".format(t-old_t,len(piece_ids),self.situation.get_player_cities_number(), self.situation.get_player_cities_number()+self.situation.get_enemy_cities_number()+self.situation.get_free_cities_number(),self.situation.get_enemy_cities_number(),ecart,last_occupation))
 				for piece_id in piece_ids:
