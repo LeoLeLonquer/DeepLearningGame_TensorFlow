@@ -201,6 +201,7 @@ class GameModel(Model):
 				s_t[i] = np.stack((chunk , chunk , chunk ,chunk ), axis = 2)
 			init = 0  
 			ecart = 0
+			last_occupation = 0
 			while 1:
 				if init:
 					self.communication.wait()
