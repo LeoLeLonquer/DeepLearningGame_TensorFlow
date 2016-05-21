@@ -229,7 +229,7 @@ class GameModel(Model):
 				
 				# play actions
 				piece_ids = self.situation.player_pieces.keys()
-				for i in range(NB_CHUNK)
+				for i in range(NB_CHUNK):
 					tab[i] = np.amax(readout_t[i]) - np.amin(readout_t[i])
 				ecart = np.amax(tab)
 				if t % 20 == 0:
