@@ -170,6 +170,7 @@ class GameModel(Model):
 			s_t1 = [None]*NB_CHUNK
 			a_t = [[None]*ACTIONS]*NB_CHUNK # vector of vector which contain the executed action
 			r_t = [None]*NB_CHUNK
+			tab = [None]*NB_CHUNK
 			action_done = None
 			
 			self.communication.wait()
@@ -348,7 +349,7 @@ class GameModel(Model):
 						D.append((s_t[i], a_t[i], r_t[i], s_t1[i], terminal))
 						if len(D) > REPLAY_MEMORY:
 							D.popleft()
-
+				ecart = np.amax(tab)
 				if t> OBSERVE:
 					# sample a minibatch to train on
 					if BATCH < len(D):
