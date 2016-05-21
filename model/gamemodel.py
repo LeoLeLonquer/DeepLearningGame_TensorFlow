@@ -200,6 +200,7 @@ class GameModel(Model):
 									chunk[q][r] = 6 + chunk[q][r].content.piece_type_id + chunk[q][r].content.owner * len(self.situation.piece_types)
 				s_t[i] = np.stack((chunk , chunk , chunk ,chunk ), axis = 2)
 			init = 0  
+			ecart = 0
 			last_occupation = 0
 			while 1:
 				if init:
@@ -229,9 +230,6 @@ class GameModel(Model):
 				
 				# play actions
 				piece_ids = self.situation.player_pieces.keys()
-				for i in range(NB_CHUNK):
-					tab[i] = np.amax(readout_t[i]) - np.amin(readout_t[i])
-				ecart = np.amax(tab)
 				if t % 20 == 0:
 					print("Nb piece [{}] : {} - Nb ville alies: {} / {} - Nb ville ennemie : {} - Ecart : {} - Explo : {}".format(t-old_t,len(piece_ids),self.situation.get_player_cities_number(), self.situation.get_player_cities_number()+self.situation.get_enemy_cities_number()+self.situation.get_free_cities_number(),self.situation.get_enemy_cities_number(),ecart,last_occupation))
 				for piece_id in piece_ids:
@@ -241,6 +239,7 @@ class GameModel(Model):
 					#find good chunk
 					i = self.situation.split_int(size,piece_id)
 					readout_t[i] = self.readout.eval(feed_dict = {self.input_layer : [s_t[i]]})[0]
+					tab[i] = np.amax(readout_t[i]) - np.amin(readout_t[i])
 					while depth > 0 and self.situation.is_player_piece(piece_id):
 						# check in the vector the best choice
 						directions = algos.directions
