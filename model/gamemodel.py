@@ -273,6 +273,15 @@ class GameModel(Model):
 						if len(result)>0:		
 							if random.random() <= epsilon or t <= OBSERVE:
 								direction = random.choice(result) # choose the one gave by the output_vector x ProbaVector
+								#Ensure in random actions to see the correct result
+								directions = algos.directions
+								next_location = loc[0] + directions[direction][0], loc[1] + directions[direction][1]
+								action_done = ELSE #at startup
+								if self.situation.is_tile_free_city(next_location) or self.situation.is_tile_enemy_city(next_location):
+									action_done = CITY
+								elif self.situation.is_tile_enemy_piece(next_location):
+									action_done = ATTACK
+								#Play the action	
 								a_t[i] = np.zeros(ACTIONS)
 								a_t[i][direction] = 1
 								self.communication.action("move %d %d" % (piece_id, direction))
