@@ -107,7 +107,15 @@ class Situation(handler.Handler):
 				if self.is_tile_player_piece([qi,ri]):
 						res += 1
 		return res	
-	
+		
+	def get_exploration_player(self):
+		res = 0
+		for qi in range(self.width):
+ 			for ri in range(self.height):
+				if self.view[qi][ri].content == None
+						res += 1
+		return res	
+		
  	def split_int(self, size,piece_id):
  		assert self.width % size == 0
  		assert self.height % size == 0

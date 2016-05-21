@@ -16,7 +16,6 @@ import tensorflow as tf
 import random
 import numpy as np
 from collections import deque
-#import pickle
 import cPickle as pickle
 
 from .base import Model
@@ -32,7 +31,6 @@ EXPLORE = 5000 # frames over which to anneal epsilon
 GAMMA = 0.99 # decay rate of past observations
 REPLAY_MEMORY = 590000  # number of previous transitions to remember
 MAX_SIZE_DEQUE = 10000
-BATCH = 100 # size of minibatch
 BATCH = 100 # size of minibatch
 NB_CHUNK = 9
 size = 10 #split(size)
@@ -266,7 +264,7 @@ class GameModel(Model):
 								readout_t[i][dir] = - 1000000
 						
 						#Bonus / Malus sur occupation de la carte
-						last_occupation = self.situation.get_occupation_player()
+						last_occupation = self.situation.get_exploration_player()
 						if last_occupation - occupation < 0:
 							bonus = -10
 						else:
@@ -296,7 +294,7 @@ class GameModel(Model):
 							elif action_done == CITY: 
 								r_t[i] = -1 #dying while taking a city is not really bad
 							else:
-								r_t[i] = -50 #dying by being attacked is bad 
+								r_t[i] = -150 #dying by being attacked is bad 
 						else:
 							if action_done == ATTACK:
 								r_t[i] = 150 #winning an attack
